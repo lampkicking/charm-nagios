@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+import string
+import sys
+import os
+import yaml
+import subprocess
+
+from Cheetah.Template import Template
+
+def write_service_template(service, host, description, command):
+        service = service.replace("__hostname__", host)
+        service = service.replace("__description__", description)
+        service = service.replace("__command__", command)
+        return service
+
+def write_host_template(host, hostname, ip_address):
+        host = host.replace("__hostname__", hostname)
+        host = host.replace("__alias__", hostname)
+        host = host.replace("__address__", ip_address)
+        return host
+
+def main():
+        remote_unit = os.environ.get("ENSEMBLE_REMOTE_UNIT")
+        service_name, _ = remote_unit.split("/")
+
+        p = subprocess.Popen(["relation-get", "hostname"],
+                             stdout=subprocess.PIPE)
+        hostname=p.stdout.read().strip()
+
+        p = subprocess.Popen(["dig", "+short", hostname],
+                                                 stdout=subprocess.PIPE)
+        ip_address = p.stdout.read().strip()
+
+        nagios_service = ""
+        host_template = """
+        define host {
+                use            generic-host    ; Name of host template to use
+                host_name      __hostname__
+                alias          __alias__
+                address        __address__
+        }
+"""
+        service_template = """
+        define service {
+                use                     generic-service    ; Name of service template to use
+                host_name                               __hostname__
+                service_description             __description__
+                check_command                   __command__
+        }
+"""
+
+        f = open("templates/config.yaml", 'r')
+        config = yaml.load(f)
+
+        # write a single host
+        host_template = write_host_template(host_template, hostname, ip_address)
+        nagios_service += host_template
+
+        for formula in config['ensemble']['formulas'].keys():
+                if service_name in formula:
+                        nagios_plugins = config['ensemble']['formulas'][formula]['plugins']
+
+        for plugins in nagios_plugins.split():
+                nagios_desc = config['ensemble']['plugins'][plugins]['desc']
+                nagios_service += write_service_template(service_template, hostname, nagios_desc, plugins)
+
+        namespace = {'hostname': hostname, 'nagios_config':nagios_service}
+        t = Template(open('templates/nagios.tmpl').read(), searchList=[namespace])
+        config_file = "/etc/nagios3/conf.d/%s-config.cfg" %hostname
+        f = open(config_file, 'w')
+        f.write(str(t))
+        f.close()
+
+        print "Restarting nagios"
+        subprocess.call(["service", "nagios3", "restart"])
+
+if __name__ == '__main__':
+        main()
+
+

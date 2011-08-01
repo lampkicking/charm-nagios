@@ -1,0 +1,18 @@
+#!/bin/bash
+
+[[ ! `which pwgen` ]] && apt-get -y install pwgen
+
+PASSWD_FILE="/var/run/ensemble/nagios.passwd"
+if [[ -e $PASSWD_FILE ]] ; then
+	PASSWORD=$(cat $PASSWD_FILE)
+else
+	PASSWORD=$(pwgen 10 1)
+	echo $PASSWORD >$PASSWD_FILE
+	chmod 0400 $PASSWD_FILE
+fi
+
+echo nagios3-cgi nagios3/adminpassword password $PASSWORD | debconf-set-selections
+echo nagios3-cgi nagios3/adminpassword-repeat password $PASSWORD | debconf-set-selections
+
+DEBIAN_FRONTEND=noninteractive apt-get -qy \
+	install nagios3 nagios-plugins python-cheetah

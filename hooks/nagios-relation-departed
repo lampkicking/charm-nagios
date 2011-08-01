@@ -1,0 +1,5 @@
+#!/bin/bash
+
+hostname=`relation-get hostname`
+rm -f /etc/nagios3/conf.d/$hostname-config.cfg
+service nagios3 restart
