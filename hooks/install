@@ -2,7 +2,7 @@
 
 [[ ! `which pwgen` ]] && apt-get -y install pwgen
 
-PASSWD_FILE="/var/run/ensemble/nagios.passwd"
+PASSWD_FILE="/var/lib/ensemble/nagios.passwd"
 if [[ -e $PASSWD_FILE ]] ; then
 	PASSWORD=$(cat $PASSWD_FILE)
 else
