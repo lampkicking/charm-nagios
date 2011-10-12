@@ -1,5 +1,5 @@
-ensemble:
-  formulas:
+juju:
+  charms:
     wordpress:
       plugins: 
        check_ping 

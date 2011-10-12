@@ -24,7 +24,7 @@ def main():
         remote_unit = os.environ.get("ENSEMBLE_REMOTE_UNIT")
         service_name, _ = remote_unit.split("/")
 
-        p = subprocess.Popen(["relation-get", "hostname"],
+        p = subprocess.Popen(["relation-get", "private-address"],
                              stdout=subprocess.PIPE)
         hostname=p.stdout.read().strip()
 
@@ -57,12 +57,12 @@ def main():
         host_template = write_host_template(host_template, hostname, ip_address)
         nagios_service += host_template
 
-        for formula in config['ensemble']['formulas'].keys():
+        for formula in config['juju']['charms'].keys():
                 if service_name in formula:
-                        nagios_plugins = config['ensemble']['formulas'][formula]['plugins']
+                        nagios_plugins = config['juju']['charms'][formula]['plugins']
 
         for plugins in nagios_plugins.split():
-                nagios_desc = config['ensemble']['plugins'][plugins]['desc']
+                nagios_desc = config['juju']['plugins'][plugins]['desc']
                 nagios_service += write_service_template(service_template, hostname, nagios_desc, plugins)
 
         namespace = {'hostname': hostname, 'nagios_config':nagios_service}
