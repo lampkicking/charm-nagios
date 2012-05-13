@@ -72,23 +72,12 @@ def main():
         }
 """
 
-        f = open("templates/config.yaml", 'r')
-        config = yaml.load(f)
-
         # write a single host
         host_template = write_host_template(host_template, hostname, ip_address)
         nagios_service += host_template
 
-        for formula in config['juju']['charms'].keys():
-                if service_name in formula:
-                        nagios_plugins = config['juju']['charms'][formula]['plugins']
-
-        for plugins in nagios_plugins.split():
-                nagios_desc = config['juju']['plugins'][plugins]['desc']
-                nagios_service += write_service_template(service_template, hostname, nagios_desc, plugins)
-
         namespace = {'hostname': hostname, 'nagios_config':nagios_service}
-        t = Template(open('templates/nagios.tmpl').read(), searchList=[namespace])
+        t = Template(open('hooks/templates/nagios.tmpl').read(), searchList=[namespace])
         config_file = "/etc/nagios3/conf.d/%s-config.cfg" %hostname
         f = open(config_file, 'w')
         f.write(str(t))
