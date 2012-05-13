@@ -5,6 +5,7 @@ import sys
 import os
 import yaml
 import subprocess
+import socket
 
 from Cheetah.Template import Template
 
@@ -20,17 +21,38 @@ def write_host_template(host, hostname, ip_address):
         host = host.replace("__address__", ip_address)
         return host
 
+
+def check_ip(n):
+    try:
+        socket.inet_pton(socket.AF_INET, n)
+        return True
+    except socket.error:
+        try:
+            socket.inet_pton(socket.AF_INET6, n)
+            return True
+        except socket.error:
+            return False
+
+
 def main():
-        remote_unit = os.environ.get("JUJU_REMOTE_UNIT")
+        if 'JUJU_REMOTE_UNIT' not in os.environ:
+            print "JUJU_REMOTE_UNIT must be set"
+            return 1
+        remote_unit = os.environ["JUJU_REMOTE_UNIT"]
         service_name, _ = remote_unit.split("/")
 
         p = subprocess.Popen(["relation-get", "private-address"],
                              stdout=subprocess.PIPE)
         hostname=p.stdout.read().strip()
-
-        p = subprocess.Popen(["dig", "+short", hostname],
-                                                 stdout=subprocess.PIPE)
-        ip_address = p.stdout.read().strip()
+        if hostname is None or not len(hostname):
+            print "relation-get failed"
+            return 2
+        if check_ip(hostname):
+            # Some providers don't provide hostnames, so use the remote unit name.
+            ip_address = hostname
+            hostname = remote_unit.replace('/','-')
+        else:
+            ip_address = socket.getaddrinfo(hostname, None)[0][4][0]
 
         nagios_service = ""
         host_template = """
@@ -74,8 +96,9 @@ def main():
 
         print "Restarting nagios"
         subprocess.call(["service", "nagios3", "restart"])
+        return 0
 
 if __name__ == '__main__':
-        main()
+        sys.exit(main())
 
 
