@@ -21,7 +21,7 @@ def write_host_template(host, hostname, ip_address):
         return host
 
 def main():
-        remote_unit = os.environ.get("ENSEMBLE_REMOTE_UNIT")
+        remote_unit = os.environ.get("JUJU_REMOTE_UNIT")
         service_name, _ = remote_unit.split("/")
 
         p = subprocess.Popen(["relation-get", "private-address"],
