@@ -1,0 +1,2 @@
+#!/bin/sh
+juju-log -l WARNING 'Relations have been radically changed. Its best to remove any existing relationships and re-establish them.'

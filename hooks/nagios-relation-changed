@@ -3,9 +3,10 @@
 import string
 import sys
 import os
+import os.path
 import yaml
 import subprocess
-from common import get_ip_and_hostname
+from common import *
 
 from Cheetah.Template import Template
 
@@ -23,12 +24,15 @@ def write_host_template(host, hostname, ip_address):
 
 
 def main():
-        if 'JUJU_REMOTE_UNIT' not in os.environ:
-            print "JUJU_REMOTE_UNIT must be set"
-            return 1
+        for var in ['JUJU_REMOTE_UNIT', 'JUJU_RELATION_ID']:
+            if var not in os.environ:
+                print "%s must be set" % (var)
+                return 1
+        relation_id = os.environ["JUJU_RELATION_ID"]
+        relation_name = os.path.basename(sys.argv[0]).split('-')[0]
         remote_unit = os.environ["JUJU_REMOTE_UNIT"]
-        service_name, _ = remote_unit.split("/")
 
+        service_name, _ = remote_unit.split("/")
         (ip_address, hostname) = get_ip_and_hostname(remote_unit)
 
         nagios_service = ""
@@ -58,10 +62,12 @@ def main():
 
         namespace = {'hostname': hostname, 'nagios_config':nagios_service}
         t = Template(open('hooks/templates/nagios.tmpl').read(), searchList=[namespace])
-        config_file = "/etc/nagios3/conf.d/%s-config.cfg" %hostname
+        config_file = host_config_path_template % (relation_id, hostname)
         f = open(config_file, 'w')
         f.write(str(t))
         f.close()
+
+        refresh_hostgroups(relation_name)
 
         print "Restarting nagios"
         subprocess.call(["service", "nagios3", "restart"])

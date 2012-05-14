@@ -1,0 +1,12 @@
+#!/usr/bin/python
+import glob
+import os
+
+import common
+
+common.remove_hostgroup(os.environ['JUJU_RELATION_ID'])
+glob_target = common.host_config_path_template % (os.environ['JUJU_RELATION_ID'], '*')
+print 'Removing relation config files: %s' % (glob_target)
+for oldconfig in glob.glob(glob_target):
+    print 'Removing %s' % (oldconfig)
+    os.unlink(oldconfig)
