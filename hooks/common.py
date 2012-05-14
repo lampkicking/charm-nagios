@@ -57,6 +57,7 @@ def handle_hostgroup(relation_id):
                          stdout=subprocess.PIPE)
     services = {}
     for unit in p.stdout:
+        unit = unit.strip()
         service_name = unit.strip().split('/')[0]
         (_, hostname) = get_ip_and_hostname(unit, relation_id)
         if service_name in services:
