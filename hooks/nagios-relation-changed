@@ -5,7 +5,7 @@ import sys
 import os
 import yaml
 import subprocess
-import socket
+from common import get_ip_and_hostname
 
 from Cheetah.Template import Template
 
@@ -22,18 +22,6 @@ def write_host_template(host, hostname, ip_address):
         return host
 
 
-def check_ip(n):
-    try:
-        socket.inet_pton(socket.AF_INET, n)
-        return True
-    except socket.error:
-        try:
-            socket.inet_pton(socket.AF_INET6, n)
-            return True
-        except socket.error:
-            return False
-
-
 def main():
         if 'JUJU_REMOTE_UNIT' not in os.environ:
             print "JUJU_REMOTE_UNIT must be set"
@@ -41,18 +29,7 @@ def main():
         remote_unit = os.environ["JUJU_REMOTE_UNIT"]
         service_name, _ = remote_unit.split("/")
 
-        p = subprocess.Popen(["relation-get", "private-address"],
-                             stdout=subprocess.PIPE)
-        hostname=p.stdout.read().strip()
-        if hostname is None or not len(hostname):
-            print "relation-get failed"
-            return 2
-        if check_ip(hostname):
-            # Some providers don't provide hostnames, so use the remote unit name.
-            ip_address = hostname
-            hostname = remote_unit.replace('/','-')
-        else:
-            ip_address = socket.getaddrinfo(hostname, None)[0][4][0]
+        (ip_address, hostname) = get_ip_and_hostname(remote_unit)
 
         nagios_service = ""
         host_template = """
@@ -75,6 +52,9 @@ def main():
         # write a single host
         host_template = write_host_template(host_template, hostname, ip_address)
         nagios_service += host_template
+
+        # all hosts should be running SSH
+        nagios_service += write_service_template(service_template, hostname, 'SSH', 'check_ssh')
 
         namespace = {'hostname': hostname, 'nagios_config':nagios_service}
         t = Template(open('hooks/templates/nagios.tmpl').read(), searchList=[namespace])

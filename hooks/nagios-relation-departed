@@ -1,5 +1,7 @@
-#!/bin/bash
+#!/usr/bin/python
 
+import common
 hostname=`relation-get private-address`
-rm -f /etc/nagios3/conf.d/$hostname-config.cfg
-service nagios3 restart
+(_,hostname) = common.get_ip_and_hostname(os.environ['JUJU_REMOTE_UNIT'])
+os.unlink('/etc/nagios3/conf.d/%s-config.cfg' % (hostname))
+subprocess.call(['service','nagios3','restart'])
