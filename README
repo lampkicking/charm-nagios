@@ -1,0 +1,17 @@
+In order to monitor anything in your juju environment for working PING
+and SSH, just relate the services to this service.
+
+juju deploy nagios central-monitor
+juju deploy mysql big-db
+juju deploy statusnet microblog
+juju add-reation big-db microblog
+juju add-relation big-db central-monitor
+juju add-relation mocroblog central-monitor
+
+This should result in your Nagios monitoring all of the service units.
+
+TODO:
+- Add a nagios-nrpe subordinate charm to make it easier to use local
+  plugins via NRPE
+- Create a proper 'monitoring' interface that charms can use to define
+  what they want monitored remotely.
