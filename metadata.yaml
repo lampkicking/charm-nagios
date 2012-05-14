@@ -8,5 +8,7 @@ provides:
   website:
     interface: http
 requires:
-  nagios:
+  legacy:
     interface: monitoring
+  nagios:
+    interface: juju-info
