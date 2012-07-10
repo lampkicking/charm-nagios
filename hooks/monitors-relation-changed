@@ -1,0 +1,30 @@
+#!/usr/bin/python
+
+import sys
+import os
+import subprocess
+import yaml
+import json
+
+# Read monitors.yaml
+if len(sys.argv) > 1:
+    relation_settings = {'monitors': open(sys.argv[1]).read(),
+                         'target-id': sys.argv[2]}
+else:
+    relation_settings = json.loads(subprocess.check_output(['relation-get','--format=json']).strip())
+
+if relation_settings is None or relation_settings == '':
+    sys.exit(0)
+
+if ('monitors' not in relation_settings 
+        or 'target-id' not in relation_settings):
+    sys.exit(0)
+
+monitors = relation_settings['monitors']
+target_id = relation_settings['target-id']
+remote_id = os.environ.get('JUJU_REMOTE_UNIT','unknown')
+
+if type(monitors) == str:
+    monitors = yaml.safe_load(monitors)
+
+# Output nagios config
