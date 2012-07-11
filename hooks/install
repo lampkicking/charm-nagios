@@ -19,5 +19,14 @@ echo nagios3-cgi nagios3/adminpassword-repeat password $PASSWORD | debconf-set-s
 DEBIAN_FRONTEND=noninteractive apt-get -qy \
 	install nagios3 nagios-plugins python-cheetah dnsutils debconf-utils
 
+# enable external commands per README.Debian file
+if !grep '^check_external_commands=1$' /etc/nagios3/nagios.cfg ; then
+    echo check_external_commands=1 >> /etc/nagios3/nagios.cfg
+fi
+service nagios3 stop || :
+dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw
+dpkg-statoverride --update --add nagios nagios 751 /var/lib/nagios3
+service nagios3 start
+
 # For the admin interface
 open-port 80

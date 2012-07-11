@@ -8,8 +8,12 @@ description: |
 provides:
   website:
     interface: http
+  mymonitors:
+    interface: monitors
 requires:
   legacy:
     interface: monitoring
   nagios:
     interface: juju-info
+  monitors:
+    interface: monitors

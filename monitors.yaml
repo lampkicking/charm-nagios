@@ -1,0 +1,10 @@
+version: '0.3'
+monitors:
+    local:
+        procrunning:
+            min: 1
+            name: '/usr/sbin/nagios3'
+    remote:
+        http:
+            nagios:
+                args: '/nagios3/'

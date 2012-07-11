@@ -5,11 +5,23 @@ import os
 import subprocess
 import yaml
 import json
+import re
+import string
+
+from pynag import Model
+
+Model.cfg_file = '/etc/nagios3/nagios.cfg'
+Model.pynag_directory = '/etc/nagios3/conf.d'
+
+PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
 # Read monitors.yaml
 if len(sys.argv) > 1:
     relation_settings = {'monitors': open(sys.argv[1]).read(),
                          'target-id': sys.argv[2]}
+    if len(sys.argv) > 3:
+        relation_settings['target-address'] = sys.argv[3]
+    
 else:
     relation_settings = json.loads(subprocess.check_output(['relation-get','--format=json']).strip())
 
@@ -22,9 +34,82 @@ if ('monitors' not in relation_settings
 
 monitors = relation_settings['monitors']
 target_id = relation_settings['target-id']
-remote_id = os.environ.get('JUJU_REMOTE_UNIT','unknown')
+# If not set, we don't mess with it, as multiple services may feed monitors in for
+# a particular address. Generally a primary will set this to its own private-address
+target_address = relation_settings.get('target-address', None)
 
-if type(monitors) == str:
+if type(monitors) != dict:
     monitors = yaml.safe_load(monitors)
 
 # Output nagios config
+try:
+    host = Model.Host.objects.get_by_shortname(target_id)
+except ValueError:
+    host = Model.Host()
+    host.set_attribute('host_name', target_id)
+    host.set_attribute('use', 'generic-host')
+    host.save()
+    # The newly created object is now somehow tained, pynag weirdness.
+    host = Model.Host.objects.get_by_shortname(target_id)
+
+if target_address is not None:
+    host.set_attribute('address', target_address)
+    host.save()
+
+reduce_RE = re.compile('[\W_]')
+
+def make_check_command(args):
+    args = [str(arg) for arg in args]
+    # There is some worry of collision, but the uniqueness of the initial
+    # command should be enough.
+    signature = reduce_RE.sub('_',''.join([os.path.basename(arg) for arg in args]))
+    try:
+        cmd = Model.Command.objects.get_by_shortname(signature)
+    except ValueError:
+        cmd = Model.Command()
+        cmd.set_attribute('command_name', signature)
+        cmd.set_attribute('command_line', ' '.join(args))
+        cmd.save()
+    return signature
+
+def customize_service(service, family, extra):
+    if family == 'http':
+        args=[]
+        cmd_args=[]
+        plugin = os.path.join(PLUGIN_PATH, 'check_http')
+        port = extra.get('port', 80)
+        path = extra.get('path', '/')
+        args = [ port , path ]
+        cmd_args = [plugin,'-p','"$ARG1$"','-u','"$ARG2$"']
+        if 'status' in extra:
+            args.append(extra['status'])
+            cmd_args.extend(('-e','"$ARG%d$"' % len(args)))
+        if 'host' in extra:
+            args.append(extra['host'])
+            cmd_args.extend(('-H','"$ARG%d$"' % len(args)))
+            cmd_args.extend(('-I','$HOSTADDRESS$'))
+        else:
+            cmd_args.extend(('-H','$HOSTADDRESS$'))
+        check_command = make_check_command(cmd_args)
+        cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+        service.set_attribute('check_command', cmd)
+        return True
+    return False
+
+for mon_family,mons in monitors['monitors']['remote'].iteritems():
+    for mon_name, mon in mons.iteritems():
+        service_name = '%s-%s' % (target_id, mon_name)
+        pynag_service_shortname = '%s/%s' % (target_id, service_name)
+        services = Model.Service.objects.filter(host_name=target_id,
+                        service_description=service_name)
+        if len(services) == 0:
+            service = Model.Service()
+            service.set_attribute('service_description', service_name)
+            service.set_attribute('host_name', target_id)
+            service.set_attribute('use', 'generic-service')
+        else:
+            service = services[0]
+        if customize_service(service, mon_family, mon):
+            service.save()
+        else:
+            print('Ignoring %s due to unknown family %s' % (mon_name, mon_family))
