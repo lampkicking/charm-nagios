@@ -26,10 +26,10 @@ import string
 
 from pynag import Model
 
+from common import customize_service, make_check_command
+
 Model.cfg_file = '/etc/nagios3/nagios.cfg'
 Model.pynag_directory = '/etc/nagios3/conf.d'
-
-PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
 # Note that one can pass in args positionally, 'monitors.yaml targetid
 # and target-address' so the hook can be tested without being in a hook
@@ -57,6 +57,8 @@ target_id = relation_settings['target-id']
 # monitors in for a particular address. Generally a primary will set this
 # to its own private-address
 target_address = relation_settings.get('target-address', None)
+# Need this for broken processing
+relation_id = os.environ.get('JUJU_RELATION_ID','testing')
 
 if type(monitors) != dict:
     monitors = yaml.safe_load(monitors)
@@ -78,46 +80,6 @@ if target_address is not None:
 
 reduce_RE = re.compile('[\W_]')
 
-
-def make_check_command(args):
-    args = [str(arg) for arg in args]
-    # There is some worry of collision, but the uniqueness of the initial
-    # command should be enough.
-    signature = reduce_RE.sub('_', ''.join(
-                [os.path.basename(arg) for arg in args]))
-    try:
-        cmd = Model.Command.objects.get_by_shortname(signature)
-    except ValueError:
-        cmd = Model.Command()
-        cmd.set_attribute('command_name', signature)
-        cmd.set_attribute('command_line', ' '.join(args))
-        cmd.save()
-    return signature
-
-
-def customize_service(service, family, extra):
-    if family == 'http':
-        args = []
-        cmd_args = []
-        plugin = os.path.join(PLUGIN_PATH, 'check_http')
-        port = extra.get('port', 80)
-        path = extra.get('path', '/')
-        args = [port, path]
-        cmd_args = [plugin, '-p', '"$ARG1$"', '-u', '"$ARG2$"']
-        if 'status' in extra:
-            args.append(extra['status'])
-            cmd_args.extend(('-e', '"$ARG%d$"' % len(args)))
-        if 'host' in extra:
-            args.append(extra['host'])
-            cmd_args.extend(('-H', '"$ARG%d$"' % len(args)))
-            cmd_args.extend(('-I', '$HOSTADDRESS$'))
-        else:
-            cmd_args.extend(('-H', '$HOSTADDRESS$'))
-        check_command = make_check_command(cmd_args)
-        cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
-        service.set_attribute('check_command', cmd)
-        return True
-    return False
 
 for mon_family, mons in monitors['monitors']['remote'].iteritems():
     for mon_name, mon in mons.iteritems():

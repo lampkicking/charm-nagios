@@ -2,6 +2,12 @@ import subprocess
 import socket
 import os
 import os.path
+import re
+
+from pynag import Model
+
+reduce_RE = re.compile('[\W_]')
+PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
 
 def check_ip(n):
@@ -84,3 +90,60 @@ def refresh_hostgroups(relation_name):
     p.communicate()
     if p.returncode != 0:
         raise RuntimeError('relation-ids failed with code %d' % p.returncode)
+
+
+def tag_object(obj, value=None):
+    notes = obj.get_attribute('notes')
+    if notes is None:
+        tags = []
+    else:
+        tags = notes.split(',')
+    if value is None:
+        value = os.environ.get('JUJU_RELATION_ID', 'testing')
+    relation_tag = 'relation_id=%s' % (value)
+    if relation_tag not in tags:
+        tags.append(relation_tag)
+        obj.set_attribute('notes', ','.join(tags))
+        obj.save()
+
+
+def make_check_command(args):
+    args = [str(arg) for arg in args]
+    # There is some worry of collision, but the uniqueness of the initial
+    # command should be enough.
+    signature = reduce_RE.sub('_', ''.join(
+                [os.path.basename(arg) for arg in args]))
+    try:
+        cmd = Model.Command.objects.get_by_shortname(signature)
+    except ValueError:
+        cmd = Model.Command()
+        cmd.set_attribute('command_name', signature)
+        cmd.set_attribute('command_line', ' '.join(args))
+        cmd.save()
+    tag_object(cmd)
+    return signature
+
+
+def customize_service(service, family, extra):
+    if family == 'http':
+        args = []
+        cmd_args = []
+        plugin = os.path.join(PLUGIN_PATH, 'check_http')
+        port = extra.get('port', 80)
+        path = extra.get('path', '/')
+        args = [port, path]
+        cmd_args = [plugin, '-p', '"$ARG1$"', '-u', '"$ARG2$"']
+        if 'status' in extra:
+            args.append(extra['status'])
+            cmd_args.extend(('-e', '"$ARG%d$"' % len(args)))
+        if 'host' in extra:
+            args.append(extra['host'])
+            cmd_args.extend(('-H', '"$ARG%d$"' % len(args)))
+            cmd_args.extend(('-I', '$HOSTADDRESS$'))
+        else:
+            cmd_args.extend(('-H', '$HOSTADDRESS$'))
+        check_command = make_check_command(cmd_args)
+        cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+        service.set_attribute('check_command', cmd)
+        return True
+    return False
