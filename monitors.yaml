@@ -7,4 +7,5 @@ monitors:
     remote:
         http:
             nagios:
-                args: '/nagios3/'
+                path: /nagios3/
+                status: 'HTTP/1.1 401'
