@@ -120,7 +120,6 @@ def make_check_command(args):
         cmd.set_attribute('command_name', signature)
         cmd.set_attribute('command_line', ' '.join(args))
         cmd.save()
-    tag_object(cmd)
     return signature
 
 

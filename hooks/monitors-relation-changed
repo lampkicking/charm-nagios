@@ -26,7 +26,7 @@ import string
 
 from pynag import Model
 
-from common import customize_service, make_check_command
+from common import customize_service, tag_object
 
 Model.cfg_file = '/etc/nagios3/nagios.cfg'
 Model.pynag_directory = '/etc/nagios3/conf.d'
@@ -74,6 +74,8 @@ except ValueError:
     # The newly created object is now somehow tained, pynag weirdness.
     host = Model.Host.objects.get_by_shortname(target_id)
 
+tag_object(host)
+
 if target_address is not None:
     host.set_attribute('address', target_address)
     host.save()
@@ -95,6 +97,7 @@ for mon_family, mons in monitors['monitors']['remote'].iteritems():
         else:
             service = services[0]
         if customize_service(service, mon_family, mon):
+            tag_object(service)
             service.save()
         else:
             print('Ignoring %s due to unknown family %s' % (mon_name,
