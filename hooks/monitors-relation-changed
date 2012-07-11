@@ -1,4 +1,20 @@
 #!/usr/bin/python
+# monitors-relation-changed - Process monitors.yaml into remote nagios monitors
+# Copyright Canonical 2012 Canonical Ltd. All Rights Reserved
+# Author: Clint Byrum <clint.byrum@canonical.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import os
@@ -15,27 +31,31 @@ Model.pynag_directory = '/etc/nagios3/conf.d'
 
 PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
-# Read monitors.yaml
+# Note that one can pass in args positionally, 'monitors.yaml targetid
+# and target-address' so the hook can be tested without being in a hook
+# context.
+#
 if len(sys.argv) > 1:
     relation_settings = {'monitors': open(sys.argv[1]).read(),
                          'target-id': sys.argv[2]}
     if len(sys.argv) > 3:
         relation_settings['target-address'] = sys.argv[3]
-    
 else:
-    relation_settings = json.loads(subprocess.check_output(['relation-get','--format=json']).strip())
+    relation_settings = json.loads(
+            subprocess.check_output(['relation-get', '--format=json']).strip())
 
 if relation_settings is None or relation_settings == '':
     sys.exit(0)
 
-if ('monitors' not in relation_settings 
+if ('monitors' not in relation_settings
         or 'target-id' not in relation_settings):
     sys.exit(0)
 
 monitors = relation_settings['monitors']
 target_id = relation_settings['target-id']
-# If not set, we don't mess with it, as multiple services may feed monitors in for
-# a particular address. Generally a primary will set this to its own private-address
+# If not set, we don't mess with it, as multiple services may feed
+# monitors in for a particular address. Generally a primary will set this
+# to its own private-address
 target_address = relation_settings.get('target-address', None)
 
 if type(monitors) != dict:
@@ -58,11 +78,13 @@ if target_address is not None:
 
 reduce_RE = re.compile('[\W_]')
 
+
 def make_check_command(args):
     args = [str(arg) for arg in args]
     # There is some worry of collision, but the uniqueness of the initial
     # command should be enough.
-    signature = reduce_RE.sub('_',''.join([os.path.basename(arg) for arg in args]))
+    signature = reduce_RE.sub('_', ''.join(
+                [os.path.basename(arg) for arg in args]))
     try:
         cmd = Model.Command.objects.get_by_shortname(signature)
     except ValueError:
@@ -72,31 +94,32 @@ def make_check_command(args):
         cmd.save()
     return signature
 
+
 def customize_service(service, family, extra):
     if family == 'http':
-        args=[]
-        cmd_args=[]
+        args = []
+        cmd_args = []
         plugin = os.path.join(PLUGIN_PATH, 'check_http')
         port = extra.get('port', 80)
         path = extra.get('path', '/')
-        args = [ port , path ]
-        cmd_args = [plugin,'-p','"$ARG1$"','-u','"$ARG2$"']
+        args = [port, path]
+        cmd_args = [plugin, '-p', '"$ARG1$"', '-u', '"$ARG2$"']
         if 'status' in extra:
             args.append(extra['status'])
-            cmd_args.extend(('-e','"$ARG%d$"' % len(args)))
+            cmd_args.extend(('-e', '"$ARG%d$"' % len(args)))
         if 'host' in extra:
             args.append(extra['host'])
-            cmd_args.extend(('-H','"$ARG%d$"' % len(args)))
-            cmd_args.extend(('-I','$HOSTADDRESS$'))
+            cmd_args.extend(('-H', '"$ARG%d$"' % len(args)))
+            cmd_args.extend(('-I', '$HOSTADDRESS$'))
         else:
-            cmd_args.extend(('-H','$HOSTADDRESS$'))
+            cmd_args.extend(('-H', '$HOSTADDRESS$'))
         check_command = make_check_command(cmd_args)
         cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
         service.set_attribute('check_command', cmd)
         return True
     return False
 
-for mon_family,mons in monitors['monitors']['remote'].iteritems():
+for mon_family, mons in monitors['monitors']['remote'].iteritems():
     for mon_name, mon in mons.iteritems():
         service_name = '%s-%s' % (target_id, mon_name)
         pynag_service_shortname = '%s/%s' % (target_id, service_name)
@@ -112,4 +135,5 @@ for mon_family,mons in monitors['monitors']['remote'].iteritems():
         if customize_service(service, mon_family, mon):
             service.save()
         else:
-            print('Ignoring %s due to unknown family %s' % (mon_name, mon_family))
+            print('Ignoring %s due to unknown family %s' % (mon_name,
+                                                            mon_family))
