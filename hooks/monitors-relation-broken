@@ -1,4 +1,7 @@
 #!/usr/bin/python
-from common import remove_tagged_objects
+from common import relations
+import os
 
-remove_tagged_objects()
+relations.kill_tag(os.environ.get('JUJU_RELATION_ID','testing'))
+relations.cleanup_untagged()
+os.system('service nagios3 reload')

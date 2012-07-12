@@ -26,7 +26,7 @@ import string
 
 from pynag import Model
 
-from common import customize_service, tag_object
+from common import customize_service, units, relations
 
 Model.cfg_file = '/etc/nagios3/nagios.cfg'
 Model.pynag_directory = '/etc/nagios3/conf.d'
@@ -59,6 +59,8 @@ target_id = relation_settings['target-id']
 target_address = relation_settings.get('target-address', None)
 # Need this for broken processing
 relation_id = os.environ.get('JUJU_RELATION_ID','testing')
+# Need this for departed
+owner_unit = os.environ.get('JUJU_REMOTE_UNIT','testing/0').replace('/','-')
 
 if type(monitors) != dict:
     monitors = yaml.safe_load(monitors)
@@ -74,7 +76,8 @@ except ValueError:
     # The newly created object is now somehow tained, pynag weirdness.
     host = Model.Host.objects.get_by_shortname(target_id)
 
-tag_object(host)
+units.tag_object(host, owner_unit)
+relations.tag_object(host, relation_id)
 
 if target_address is not None:
     host.set_attribute('address', target_address)
@@ -97,8 +100,11 @@ for mon_family, mons in monitors['monitors']['remote'].iteritems():
         else:
             service = services[0]
         if customize_service(service, mon_family, mon):
-            tag_object(service)
+            units.tag_object(service, owner_unit)
+            relations.tag_object(service, relation_id)
             service.save()
         else:
             print('Ignoring %s due to unknown family %s' % (mon_name,
                                                             mon_family))
+
+os.system('service nagios3 reload')

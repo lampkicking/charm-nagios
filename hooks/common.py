@@ -3,12 +3,12 @@ import socket
 import os
 import os.path
 import re
+import sqlite3
 
 from pynag import Model
 
 reduce_RE = re.compile('[\W_]')
 PLUGIN_PATH = '/usr/lib/nagios/plugins'
-
 
 def check_ip(n):
     try:
@@ -92,70 +92,50 @@ def refresh_hostgroups(relation_name):
         raise RuntimeError('relation-ids failed with code %d' % p.returncode)
 
 
-def get_default_tag_value():
-    return os.environ.get('JUJU_RELATION_ID', 'testing')
+class ObjectTagCollection(object):
+
+    path = os.path.join('data','tags.db')
+
+    def __init__(self, tagtype):
+        self.tagtype = tagtype
+        ddir = os.path.dirname(type(self).path)
+        if not os.path.exists(ddir):
+            os.mkdir(ddir)
+        self._sqlite = sqlite3.Connection(type(self).path)
+        self._sqlite.execute('CREATE TABLE IF NOT EXISTS obj (obj text PRIMARY KEY)')
+        self._sqlite.execute('CREATE TABLE IF NOT EXISTS `%s` (obj text, tag text, PRIMARY KEY( obj, tag ))' % (tagtype))
+
+    def destroy(self):
+        self._sqlite = None
+        os.unlink(type(self).path)
+
+    def tag_object(self, obj, value):
+        try:
+            self._sqlite.execute('INSERT INTO obj VALUES(?)', (obj,))
+        except sqlite3.IntegrityError:
+            pass
+        self._sqlite.execute("INSERT INTO `%s` VALUES (?,?)" % (self.tagtype), (obj, value))
+        self._sqlite.commit()
+
+    def untag_object(self, obj, value):
+        self._sqlite.execute('DELETE FROM `%s` WHERE obj = ? AND tag = ?' % (self.tagtype), (obj, value))
+        self._sqlite.commit()
+
+    def kill_tag(self, value):
+        self._sqlite.execute('DELETE FROM `%s` WHERE tag = ?' % (self.tagtype), (value,))
+        self._sqlite.commit()
+
+    def cleanup_untagged(self):
+        results = self._sqlite.execute(
+                "SELECT o.obj FROM obj AS o LEFT OUTER JOIN `%s` AS t ON o.obj = t.obj WHERE t.obj IS NULL" % self.tagtype)
+        for row in results:
+            if os.path.exists(row[0]):
+                os.unlink(row[0])
+            self._sqlite.execute("DELETE FROM obj WHERE obj = ?", (row[0],))
+            self._sqlite.commit()
 
 
-def get_tag_file(value):
-    if value is None:
-        value = get_default_tag_value()
-    if not os.path.exists('data'):
-        os.mkdir('data')
-    return 'data/%s' % value
-
-
-def tag_object(obj, value=None):
-    if value is None:
-        value = get_default_tag_value()
-    with open(get_tag_file(value),'a+') as tagdata:
-        files = set([x.strip() for x in tagdata.readlines()])
-        fname = obj.get_suggested_filename()
-        if fname not in files:
-            tagdata.write("%s\n" % fname)
-
-
-def get_all_monitors_tags():
-    result = {}
-    relids = subprocess.Popen(['relation-ids', 'monitors'], stdout=subprocess.PIPE)
-    all_relids = set([relid.strip() for relid in relids.stdout])
-    relids.wait()
-    # During broken, reliation-ids will not show "my" relid
-    my_relid = get_default_tag_value()
-    all_relids.add(my_relid)
-    for relid in all_relids:
-        rel_file = get_tag_file(relid)
-        if os.path.exists(rel_file):
-            with open(rel_file, 'r') as tagdata:
-                files = [l.strip() for l in tagdata]
-                for f in files:
-                    if f in result:
-                        result[f].add(relid)
-                    else:
-                        result[f]=set()
-                        result[f].add(relid)
-    return result
-            
-
-def remove_tagged_objects(value=None):
-    if value is None:
-        value = get_default_tag_value()
-    all_tags = get_all_monitors_tags()
-    rel_file = get_tag_file(value)
-    if os.path.exists(rel_file):
-        with open(rel_file, 'r') as tagdata:
-            for f in [l.strip() for l in tagdata]:
-                if f in all_tags:
-                    all_tags[f].remove(value) 
-                    if len(all_tags[f]) == 0:
-                        try:
-                            subprocess.call(['juju-log','removing %s' % (f)])
-                            os.unlink(f)
-                        except IOError, e:
-                            subprocess.call(['juju-log','failed to remove %s (%s)' % (f,e)])
-        os.unlink(rel_file)
-
-
-def make_check_command(args):
+def _make_check_command(args):
     args = [str(arg) for arg in args]
     # There is some worry of collision, but the uniqueness of the initial
     # command should be enough.
@@ -189,8 +169,12 @@ def customize_service(service, family, extra):
             cmd_args.extend(('-I', '$HOSTADDRESS$'))
         else:
             cmd_args.extend(('-H', '$HOSTADDRESS$'))
-        check_command = make_check_command(cmd_args)
+        check_command = _make_check_command(cmd_args)
         cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
         service.set_attribute('check_command', cmd)
         return True
     return False
+
+units = ObjectTagCollection('units')
+relations = ObjectTagCollection('units')
+

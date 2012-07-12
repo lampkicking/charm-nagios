@@ -1,0 +1,7 @@
+#!/usr/bin/python
+from common import units
+import os
+
+units.kill_tag(os.environ.get('JUJU_REMOTE_UNIT','testing-0'))
+units.cleanup_untagged()
+os.system('service nagios3 reload')
