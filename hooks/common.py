@@ -110,11 +110,8 @@ class ObjectTagCollection(object):
         os.unlink(type(self).path)
 
     def tag_object(self, obj, value):
-        try:
-            self._sqlite.execute('INSERT INTO obj VALUES(?)', (obj,))
-        except sqlite3.IntegrityError:
-            pass
-        self._sqlite.execute("INSERT INTO `%s` VALUES (?,?)" % (self.tagtype), (obj, value))
+        self._sqlite.execute('INSERT OR IGNORE INTO obj VALUES(?)', (obj,))
+        self._sqlite.execute("INSERT OR IGNORE INTO `%s` VALUES (?,?)" % (self.tagtype), (obj, value))
         self._sqlite.commit()
 
     def untag_object(self, obj, value):
@@ -176,5 +173,5 @@ def customize_service(service, family, extra):
     return False
 
 units = ObjectTagCollection('units')
-relations = ObjectTagCollection('units')
+relations = ObjectTagCollection('relations')
 

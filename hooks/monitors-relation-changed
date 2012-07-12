@@ -76,8 +76,8 @@ except ValueError:
     # The newly created object is now somehow tained, pynag weirdness.
     host = Model.Host.objects.get_by_shortname(target_id)
 
-units.tag_object(host, owner_unit)
-relations.tag_object(host, relation_id)
+units.tag_object(host.get_suggested_filename(), owner_unit)
+relations.tag_object(host.get_suggested_filename(), relation_id)
 
 if target_address is not None:
     host.set_attribute('address', target_address)
@@ -100,8 +100,8 @@ for mon_family, mons in monitors['monitors']['remote'].iteritems():
         else:
             service = services[0]
         if customize_service(service, mon_family, mon):
-            units.tag_object(service, owner_unit)
-            relations.tag_object(service, relation_id)
+            units.tag_object(service.get_suggested_filename(), owner_unit)
+            relations.tag_object(service.get_suggested_filename(), relation_id)
             service.save()
         else:
             print('Ignoring %s due to unknown family %s' % (mon_name,
