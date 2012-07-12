@@ -147,30 +147,52 @@ def _make_check_command(args):
         cmd.save()
     return signature
 
+def _extend_args(args, cmd_args, switch, value):
+    args.append(value)
+    cmd_args.extend((switch, '"$ARG%d$"' % len(args)))
+
+def customize_http(service, extra):
+    args = []
+    cmd_args = []
+    plugin = os.path.join(PLUGIN_PATH, 'check_http')
+    port = extra.get('port', 80)
+    path = extra.get('path', '/')
+    args = [port, path]
+    cmd_args = [plugin, '-p', '"$ARG1$"', '-u', '"$ARG2$"']
+    if 'status' in extra:
+        _extend_args(args, cmd_args, '-e', extra['status'])
+    if 'host' in extra:
+        _extend_args(args, cmd_args, '-H', extra['host'])
+        cmd_args.extend(('-I', '$HOSTADDRESS$'))
+    else:
+        cmd_args.extend(('-H', '$HOSTADDRESS$'))
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
+
+def customize_mysql(service, extra):
+    plugin = os.path.join(PLUGIN_PATH, 'check_mysql')
+    args = []
+    cmd_args = [plugin,'-H', '$HOSTADDRESS$']
+    if 'user' in extra:
+        _extend_args(args, cmd_args, '-u', extra['user'])
+    if 'password' in extra:
+        _extend_args(args, cmd_args, '-p', extra['password'])
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
 
 def customize_service(service, family, extra):
-    if family == 'http':
-        args = []
-        cmd_args = []
-        plugin = os.path.join(PLUGIN_PATH, 'check_http')
-        port = extra.get('port', 80)
-        path = extra.get('path', '/')
-        args = [port, path]
-        cmd_args = [plugin, '-p', '"$ARG1$"', '-u', '"$ARG2$"']
-        if 'status' in extra:
-            args.append(extra['status'])
-            cmd_args.extend(('-e', '"$ARG%d$"' % len(args)))
-        if 'host' in extra:
-            args.append(extra['host'])
-            cmd_args.extend(('-H', '"$ARG%d$"' % len(args)))
-            cmd_args.extend(('-I', '$HOSTADDRESS$'))
-        else:
-            cmd_args.extend(('-H', '$HOSTADDRESS$'))
-        check_command = _make_check_command(cmd_args)
-        cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
-        service.set_attribute('check_command', cmd)
-        return True
+    customs = { 'http': customize_http,
+                'mysql': customize_mysql }
+    if family in customs:
+        return customs[family](service, extra)
     return False
+
 
 units = ObjectTagCollection('units')
 relations = ObjectTagCollection('relations')
