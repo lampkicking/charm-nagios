@@ -28,9 +28,10 @@ fi
 if !grep '^check_external_commands=1$' /etc/nagios3/nagios.cfg ; then
     echo check_external_commands=1 >> /etc/nagios3/nagios.cfg
 fi
+# || :'s are for idempotency
 service nagios3 stop || :
-dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw
-dpkg-statoverride --update --add nagios nagios 751 /var/lib/nagios3
+dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw || :
+dpkg-statoverride --update --add nagios nagios 751 /var/lib/nagios3 || :
 service nagios3 start
 
 # For the admin interface
