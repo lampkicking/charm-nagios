@@ -92,19 +92,67 @@ def refresh_hostgroups(relation_name):
         raise RuntimeError('relation-ids failed with code %d' % p.returncode)
 
 
-def tag_object(obj, value=None):
-    notes = obj.get_attribute('notes')
-    if notes is None:
-        tags = []
-    else:
-        tags = notes.split(',')
+def get_default_tag_value():
+    return os.environ.get('JUJU_RELATION_ID', 'testing')
+
+
+def get_tag_file(value):
     if value is None:
-        value = os.environ.get('JUJU_RELATION_ID', 'testing')
-    relation_tag = 'relation_id=%s' % (value)
-    if relation_tag not in tags:
-        tags.append(relation_tag)
-        obj.set_attribute('notes', ','.join(tags))
-        obj.save()
+        value = get_default_tag_value()
+    if not os.path.exists('data'):
+        os.mkdir('data')
+    return 'data/%s' % value
+
+
+def tag_object(obj, value=None):
+    if value is None:
+        value = get_default_tag_value()
+    with open(get_tag_file(value),'a+') as tagdata:
+        files = set([x.strip() for x in tagdata.readlines()])
+        fname = obj.get_suggested_filename()
+        if fname not in files:
+            tagdata.write("%s\n" % fname)
+
+
+def get_all_monitors_tags():
+    result = {}
+    relids = subprocess.Popen(['relation-ids', 'monitors'], stdout=subprocess.PIPE)
+    all_relids = set([relid.strip() for relid in relids.stdout])
+    relids.wait()
+    # During broken, reliation-ids will not show "my" relid
+    my_relid = get_default_tag_value()
+    all_relids.add(my_relid)
+    for relid in all_relids:
+        rel_file = get_tag_file(relid)
+        if os.path.exists(rel_file):
+            with open(rel_file, 'r') as tagdata:
+                files = [l.strip() for l in tagdata]
+                for f in files:
+                    if f in result:
+                        result[f].add(relid)
+                    else:
+                        result[f]=set()
+                        result[f].add(relid)
+    return result
+            
+
+def remove_tagged_objects(value=None):
+    if value is None:
+        value = get_default_tag_value()
+    all_tags = get_all_monitors_tags()
+    rel_file = get_tag_file(value)
+    if os.path.exists(rel_file):
+        with open(rel_file, 'r') as tagdata:
+            for f in [l.strip() for l in tagdata]:
+                if f in all_tags:
+                    all_tags[f].remove(value) 
+                    if len(all_tags[f]) == 0:
+                        try:
+                            subprocess.call(['juju-log','removing %s' % (f)])
+                            os.unlink(f)
+                        except IOError, e:
+                            subprocess.call(['juju-log','failed to remove %s (%s)' % (f,e)])
+        os.unlink(rel_file)
 
 
 def make_check_command(args):

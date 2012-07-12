@@ -1,0 +1,4 @@
+#!/usr/bin/python
+from common import remove_tagged_objects
+
+remove_tagged_objects()
