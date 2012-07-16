@@ -191,9 +191,9 @@ def customize_nrpe(service, name, extra):
     args = []
     cmd_args = [plugin,'-H', '$HOSTADDRESS$']
     if name in ('mem','swap'):
-        cmd_args.extend(('-C', 'check_%s' % name))
+        cmd_args.extend(('-c', 'check_%s' % name))
     elif 'command' in extra:
-        cmd_args.extend(('-C', extra['command']))
+        cmd_args.extend(('-c', extra['command']))
     else:
         return False
     check_command = _make_check_command(cmd_args)
