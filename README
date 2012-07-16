@@ -10,8 +10,21 @@ juju add-relation mocroblog central-monitor
 
 This should result in your Nagios monitoring all of the service units.
 
-TODO:
-- Add a nagios-nrpe subordinate charm to make it easier to use local
-  plugins via NRPE
-- Create a proper 'monitoring' interface that charms can use to define
-  what they want monitored remotely.
+monitors interface
+==================
+
+The monitors interface expects three fields:
+
+* monitors - YAML matching the monitors yaml spec. See
+  example.monitors.yaml for more information.
+* target-id - Assign any monitors to this target host definition.
+* target-address - Optional, specifies the host of the target to
+  monitor. This must be specified by at least one unit so that the
+  intended target-id will be monitorable.
+
+nrpe
+====
+
+There is an NRPE subordinate charm which must be used for any local
+monitors.  See the 'nrpe' charm's README for information on how to
+make use of it.
