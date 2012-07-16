@@ -3,6 +3,9 @@ import os
 
 from tempfile import NamedTemporaryFile
 
+""" This is meant to test the ObjectTagCollection bits. It should
+    probably be made into a proper unit test. """
+
 x = ObjectTagCollection('test-units')
 y = ObjectTagCollection('test-relids')
 
