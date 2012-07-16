@@ -151,7 +151,7 @@ def _extend_args(args, cmd_args, switch, value):
     args.append(value)
     cmd_args.extend((switch, '"$ARG%d$"' % len(args)))
 
-def customize_http(service, extra):
+def customize_http(service, name, extra):
     args = []
     cmd_args = []
     plugin = os.path.join(PLUGIN_PATH, 'check_http')
@@ -172,7 +172,7 @@ def customize_http(service, extra):
     return True
 
 
-def customize_mysql(service, extra):
+def customize_mysql(service, name, extra):
     plugin = os.path.join(PLUGIN_PATH, 'check_mysql')
     args = []
     cmd_args = [plugin,'-H', '$HOSTADDRESS$']
@@ -186,11 +186,29 @@ def customize_mysql(service, extra):
     return True
 
 
-def customize_service(service, family, extra):
+def customize_nrpe(service, name, extra):
+    plugin = os.path.join(PLUGIN_PATH, 'check_nrpe')
+    args = []
+    cmd_args = [plugin,'-H', '$HOSTADDRESS$']
+    if name in ('mem','swap'):
+        cmd_args.extend(('-C', 'check_%s' % name))
+    elif 'command' in extra:
+        cmd_args.extend(('-C', extra['command']))
+    else:
+        return False
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
+
+
+def customize_service(service, family, name, extra):
     customs = { 'http': customize_http,
-                'mysql': customize_mysql }
+                'mysql': customize_mysql,
+                'nrpe': customize_nrpe}
     if family in customs:
-        return customs[family](service, extra)
+        return customs[family](service, name, extra)
     return False
 
 

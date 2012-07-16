@@ -99,7 +99,7 @@ for mon_family, mons in monitors['monitors']['remote'].iteritems():
             service.set_attribute('use', 'generic-service')
         else:
             service = services[0]
-        if customize_service(service, mon_family, mon):
+        if customize_service(service, mon_family, mon_name, mon):
             units.tag_object(service.get_suggested_filename(), owner_unit)
             relations.tag_object(service.get_suggested_filename(), relation_id)
             service.save()
