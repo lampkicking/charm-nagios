@@ -122,9 +122,18 @@ class ObjectTagCollection(object):
         self._sqlite.execute('DELETE FROM `%s` WHERE tag = ?' % (self.tagtype), (value,))
         self._sqlite.commit()
 
-    def cleanup_untagged(self):
-        results = self._sqlite.execute(
-                "SELECT o.obj FROM obj AS o LEFT OUTER JOIN `%s` AS t ON o.obj = t.obj WHERE t.obj IS NULL" % self.tagtype)
+    def cleanup_untagged(self, valid_tags=[]):
+        if len(valid_tags):
+            self._sqlite.execute(
+                "DELETE FROM `%s` WHERE tag NOT IN (%s)" % (self.tagtype, ','.join('?'*len(valid_tags))),
+                valid_tags)
+
+        sql = """
+            SELECT o.obj
+            FROM obj AS o LEFT OUTER JOIN `%s` AS t ON o.obj = t.obj
+            WHERE t.obj IS NULL""" % self.tagtype
+
+        results = self._sqlite.execute(sql)
         for row in results:
             if os.path.exists(row[0]):
                 os.unlink(row[0])
