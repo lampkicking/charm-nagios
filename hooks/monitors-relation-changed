@@ -24,7 +24,7 @@ import json
 import re
 import string
 
-from common import customize_service, units, relations, get_pynag_host, get_pynag_service
+from common import customize_service, units, relations, get_pynag_host, get_pynag_service, refresh_hostgroups
 
 # Note that one can pass in args positionally, 'monitors.yaml targetid
 # and target-address' so the hook can be tested without being in a hook
@@ -87,4 +87,5 @@ for mon_family, mons in monitors['monitors']['remote'].iteritems():
             print('Ignoring %s due to unknown family %s' % (mon_name,
                                                             mon_family))
 
+refresh_hostgroups()
 os.system('service nagios3 reload')

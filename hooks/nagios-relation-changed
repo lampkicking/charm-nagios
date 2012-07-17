@@ -6,7 +6,7 @@ import os
 import os.path
 import yaml
 import subprocess
-from common import get_ip_and_hostname, get_pynag_host
+from common import get_ip_and_hostname, get_pynag_host, refresh_hostgroups
 
 from pynag import Model
 
@@ -16,7 +16,6 @@ def main():
                 print "%s must be set" % (var)
                 return 1
         relation_id = os.environ["JUJU_RELATION_ID"]
-        relation_name = os.path.basename(sys.argv[0]).split('-')[0]
         remote_unit = os.environ["JUJU_REMOTE_UNIT"]
 
         service_name, _ = remote_unit.split("/")
@@ -27,7 +26,7 @@ def main():
         host.set_attribute('address', ip_address)
         host.save()
 
-        refresh_hostgroups(relation_name)
+        refresh_hostgroups()
 
         print "Restarting nagios"
         subprocess.call(["service", "nagios3", "restart"])
