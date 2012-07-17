@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from common import units, refresh_hostgroups
+from common import units, refresh_hostgroups, get_valid_relations
 import os
 import subprocess
 
