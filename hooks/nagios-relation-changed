@@ -24,6 +24,8 @@ def main():
 
         # write a single host
         host = get_pynag_host(hostname)
+        host.set_attribute('address', ip_address)
+        host.save()
 
         refresh_hostgroups(relation_name)
 

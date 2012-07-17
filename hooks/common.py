@@ -37,10 +37,9 @@ def get_ip_and_hostname(remote_unit, relation_id=None):
     if check_ip(hostname):
         # Some providers don't provide hostnames, so use the remote unit name.
         ip_address = hostname
-        hostname = remote_unit.replace('/','-')
     else:
         ip_address = socket.getaddrinfo(hostname, None)[0][4][0]
-    return (ip_address, hostname)
+    return (ip_address, remote_unit.replace('/', '-'))
 
 # relationId-hostname-config.cfg
 host_config_path_template = '/etc/nagios3/conf.d/%s-%s-config.cfg'
@@ -86,7 +85,7 @@ def handle_hostgroup(relation_id):
 
         hgroup.set_attribute('members', ','.join(members))
         hgroup.save()
-        hgroup_relations.tag_object(hgroup, relation_id)
+        hgroup_relations.tag_object(hgroup.get_suggested_filename(), relation_id)
 
 def refresh_hostgroup_by_relid(relation_id):
     remove_hostgroup(relation_id)
