@@ -211,7 +211,7 @@ def customize_service(service, family, name, extra):
     return False
 
 
-def get_pynag_host(target_id):
+def get_pynag_host(target_id, owner_unit=None, owner_relation=None):
     try:
         host = Model.Host.objects.get_by_shortname(target_id)
     except ValueError:
@@ -219,9 +219,13 @@ def get_pynag_host(target_id):
         host.set_attribute('host_name', target_id)
         host.set_attribute('use', 'generic-host')
         host.save()
+        if owner_unit:
+            units.tag_object(host.get_suggested_filename(), owner_unit)
+        if owner_relation:
+            relations.tag_object(host.get_suggested_filename(), owner_relation)
         # The newly created object is now somehow tained, pynag weirdness.
         host = Model.Host.objects.get_by_shortname(target_id)
-    apply_host_policy(target_id)
+    apply_host_policy(target_id, owner_unit, owner_relation)
     return host
 
 
@@ -238,10 +242,23 @@ def get_pynag_service(target_id, service_name):
     return service
 
 
-def apply_host_policy(target_id):
+def apply_host_policy(target_id, owner_unit, owner_relation):
     ssh_service = get_pynag_service(target_id, 'SSH')
     ssh_service.set_attribute('check_command', 'check_ssh')
     ssh_service.save()
+    if owner_unit:
+        units.tag_object(ssh_service.get_suggested_filename(), owner_unit)
+    if owner_relation:
+        relations.tag_object(ssh_service.get_suggested_filename(), owner_relation)
+
+
+def get_valid_relations():
+    for x in subprocess.Popen(['relation-ids', 'monitors'], 
+        stdout=subprocess.PIPE).stdout:
+        yield x.strip()
+    for x in subprocess.Popen(['relation-ids', 'nagios'], 
+        stdout=subprocess.PIPE).stdout:
+        yield x.strip()
 
 
 units = ObjectTagCollection('units')

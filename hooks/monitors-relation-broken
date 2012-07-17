@@ -1,13 +1,15 @@
 #!/usr/bin/python
-from common import relations
+from common import relations, refresh_hostgroups
 import os
+import sys
 import subprocess
+
+relation_name = sys.argv[0].split('-')[1]
 
 # We need this to cleanup any hanging relations in the tables
 if 'JUJU_RELATION_ID' in os.environ:
+    valid_relations = list(get_valid_relations())
     this_relation_id = os.environ['JUJU_RELATION_ID']
-    valid_relations = [x.strip() for x in subprocess.Popen(['relation-ids', 'monitors'],
-        stdout=subprocess.PIPE).stdout.readlines()]
     if this_relation_id not in valid_relations:
         valid_relations.append(this_relation_id)
 else:
@@ -16,4 +18,5 @@ else:
 
 relations.kill_tag(this_relation_id)
 relations.cleanup_untagged(valid_relations)
+refresh_hostgroups()
 os.system('service nagios3 reload')

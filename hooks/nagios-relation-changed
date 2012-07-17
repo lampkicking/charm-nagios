@@ -22,7 +22,7 @@ def main():
         (ip_address, hostname) = get_ip_and_hostname(remote_unit)
 
         # write a single host
-        host = get_pynag_host(hostname)
+        host = get_pynag_host(hostname, owner_unit=hostname, owner_relation=relation_id)
         host.set_attribute('address', ip_address)
         host.save()
 
