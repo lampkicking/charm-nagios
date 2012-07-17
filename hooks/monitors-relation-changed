@@ -24,12 +24,7 @@ import json
 import re
 import string
 
-from pynag import Model
-
-from common import customize_service, units, relations
-
-Model.cfg_file = '/etc/nagios3/nagios.cfg'
-Model.pynag_directory = '/etc/nagios3/conf.d'
+from common import customize_service, units, relations, get_pynag_host, get_pynag_service
 
 # Note that one can pass in args positionally, 'monitors.yaml targetid
 # and target-address' so the hook can be tested without being in a hook
@@ -66,15 +61,7 @@ if type(monitors) != dict:
     monitors = yaml.safe_load(monitors)
 
 # Output nagios config
-try:
-    host = Model.Host.objects.get_by_shortname(target_id)
-except ValueError:
-    host = Model.Host()
-    host.set_attribute('host_name', target_id)
-    host.set_attribute('use', 'generic-host')
-    host.save()
-    # The newly created object is now somehow tained, pynag weirdness.
-    host = Model.Host.objects.get_by_shortname(target_id)
+host = get_pynag_host(target_id)
 
 if target_address is not None:
     # We only tag primaries because of https://launchpad.net/bugs/1025478
@@ -90,16 +77,7 @@ reduce_RE = re.compile('[\W_]')
 for mon_family, mons in monitors['monitors']['remote'].iteritems():
     for mon_name, mon in mons.iteritems():
         service_name = '%s-%s' % (target_id, mon_name)
-        pynag_service_shortname = '%s/%s' % (target_id, service_name)
-        services = Model.Service.objects.filter(host_name=target_id,
-                        service_description=service_name)
-        if len(services) == 0:
-            service = Model.Service()
-            service.set_attribute('service_description', service_name)
-            service.set_attribute('host_name', target_id)
-            service.set_attribute('use', 'generic-service')
-        else:
-            service = services[0]
+        service = get_pynag_service(target_id, service_name)
         if customize_service(service, mon_family, mon_name, mon):
             if target_address is not None:
                 units.tag_object(service.get_suggested_filename(), owner_unit)

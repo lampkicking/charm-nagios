@@ -7,6 +7,9 @@ import sqlite3
 
 from pynag import Model
 
+Model.cfg_file = '/etc/nagios3/nagios.cfg'
+Model.pynag_directory = '/etc/nagios3/conf.d'
+
 reduce_RE = re.compile('[\W_]')
 PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
@@ -53,9 +56,8 @@ hostgroup_path_template = '/etc/nagios3/conf.d/%s-hostgroup.cfg'
 
 
 def remove_hostgroup(relation_id):
-    hostgroup_path = hostgroup_path_template % (relation_id)
-    if os.path.exists(hostgroup_path):
-        os.unlink(hostgroup_path)
+    hgroup_relations.kill_tag(relation_id)
+    hgroup_relations.cleanup_untagged()
 
 
 def handle_hostgroup(relation_id):
@@ -76,17 +78,27 @@ def handle_hostgroup(relation_id):
 
     hostgroup_path = hostgroup_path_template % (relation_id)
     for service, members in services.iteritems():
-        with open(hostgroup_path, 'w') as outfile:
-            outfile.write(hostgroup_template % {'name': service,
-                'alias': service, 'members': ','.join(members)})
+        try:
+            hgroup = Model.Hostgroup.objects.get_by_shortname(service)
+        except ValueError:
+            hgroup = Model.Hostgroup()
+            hgroup.set_attribute('hostgroup_name', service)
+
+        hgroup.set_attribute('members', ','.join(members))
+        hgroup.save()
+        hgroup_relations.tag_object(hgroup, relation_id)
+
+def refresh_hostgroup_by_relid(relation_id):
+    remove_hostgroup(relation_id)
+    handle_hostgroup(relation_id)
+
 
 def refresh_hostgroups(relation_name):
     p = subprocess.Popen(["relation-ids",relation_name],
         stdout=subprocess.PIPE)
     relids = [ relation_id.strip() for relation_id in p.stdout ]
     for relation_id in relids:
-        remove_hostgroup(relation_id)
-        handle_hostgroup(relation_id)
+        refresh_hostgroup_by_relid(relation_id)
     p.communicate()
     if p.returncode != 0:
         raise RuntimeError('relation-ids failed with code %d' % p.returncode)
@@ -211,7 +223,6 @@ def customize_nrpe(service, name, extra):
     return True
 
 
-
 def customize_service(service, family, name, extra):
     customs = { 'http': customize_http,
                 'mysql': customize_mysql,
@@ -221,6 +232,39 @@ def customize_service(service, family, name, extra):
     return False
 
 
+def get_pynag_host(target_id):
+    try:
+        host = Model.Host.objects.get_by_shortname(target_id)
+    except ValueError:
+        host = Model.Host()
+        host.set_attribute('host_name', target_id)
+        host.set_attribute('use', 'generic-host')
+        host.save()
+        # The newly created object is now somehow tained, pynag weirdness.
+        host = Model.Host.objects.get_by_shortname(target_id)
+    apply_host_policy(target_id)
+    return host
+
+
+def get_pynag_service(target_id, service_name):
+    services = Model.Service.objects.filter(host_name=target_id,
+                    service_description=service_name)
+    if len(services) == 0:
+        service = Model.Service()
+        service.set_attribute('service_description', service_name)
+        service.set_attribute('host_name', target_id)
+        service.set_attribute('use', 'generic-service')
+    else:
+        service = services[0]
+    return service
+
+
+def apply_host_policy(target_id):
+    ssh_service = get_pynag_service(target_id, 'SSH')
+    ssh_service.set_attribute('check_command', 'check_ssh')
+    ssh_service.save()
+
+
 units = ObjectTagCollection('units')
 relations = ObjectTagCollection('relations')
-
+hgroup_relations = ObjectTagCollection('hgroup_relations')
