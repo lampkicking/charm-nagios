@@ -4,11 +4,16 @@ import os
 import os.path
 import re
 import sqlite3
+import shutil
 
 from pynag import Model
 
+INPROGRESS_CONF_D = '/etc/nagios3/inprogress.d'
+NAGIOS_CONF_D = '/etc/nagios3/conf.d'
+NAGIOS_CONF_D_BAK = '/etc/nagios3/conf.d.bak'
+
 Model.cfg_file = '/etc/nagios3/nagios.cfg'
-Model.pynag_directory = '/etc/nagios3/conf.d'
+Model.pynag_directory = INPROGRESS_CONF_D
 
 reduce_RE = re.compile('[\W_]')
 PLUGIN_PATH = '/usr/lib/nagios/plugins'
@@ -81,55 +86,6 @@ def refresh_hostgroups():
 
         hgroup.set_attribute('members', ','.join(members))
         hgroup.save()
-
-
-class ObjectTagCollection(object):
-
-    path = os.path.join('data','tags.db')
-
-    def __init__(self, tagtype):
-        self.tagtype = tagtype
-        ddir = os.path.dirname(type(self).path)
-        if not os.path.exists(ddir):
-            os.mkdir(ddir)
-        self._sqlite = sqlite3.Connection(type(self).path)
-        self._sqlite.execute('CREATE TABLE IF NOT EXISTS obj (obj text PRIMARY KEY)')
-        self._sqlite.execute('CREATE TABLE IF NOT EXISTS `%s` (obj text, tag text, PRIMARY KEY( obj, tag ))' % (tagtype))
-
-    def destroy(self):
-        self._sqlite = None
-        os.unlink(type(self).path)
-
-    def tag_object(self, obj, value):
-        self._sqlite.execute('INSERT OR IGNORE INTO obj VALUES(?)', (obj,))
-        self._sqlite.execute("INSERT OR IGNORE INTO `%s` VALUES (?,?)" % (self.tagtype), (obj, value))
-        self._sqlite.commit()
-
-    def untag_object(self, obj, value):
-        self._sqlite.execute('DELETE FROM `%s` WHERE obj = ? AND tag = ?' % (self.tagtype), (obj, value))
-        self._sqlite.commit()
-
-    def kill_tag(self, value):
-        self._sqlite.execute('DELETE FROM `%s` WHERE tag = ?' % (self.tagtype), (value,))
-        self._sqlite.commit()
-
-    def cleanup_untagged(self, valid_tags=[]):
-        if len(valid_tags):
-            self._sqlite.execute(
-                "DELETE FROM `%s` WHERE tag NOT IN (%s)" % (self.tagtype, ','.join('?'*len(valid_tags))),
-                valid_tags)
-
-        sql = """
-            SELECT o.obj
-            FROM obj AS o LEFT OUTER JOIN `%s` AS t ON o.obj = t.obj
-            WHERE t.obj IS NULL""" % self.tagtype
-
-        results = self._sqlite.execute(sql)
-        for row in results:
-            if os.path.exists(row[0]):
-                os.unlink(row[0])
-            self._sqlite.execute("DELETE FROM obj WHERE obj = ?", (row[0],))
-            self._sqlite.commit()
 
 
 def _make_check_command(args):
@@ -219,11 +175,7 @@ def get_pynag_host(target_id, owner_unit=None, owner_relation=None):
         host.set_attribute('host_name', target_id)
         host.set_attribute('use', 'generic-host')
         host.save()
-        if owner_unit:
-            units.tag_object(host.get_suggested_filename(), owner_unit)
-        if owner_relation:
-            relations.tag_object(host.get_suggested_filename(), owner_relation)
-        # The newly created object is now somehow tained, pynag weirdness.
+        # The newly created object is now somehow tainted, pynag weirdness.
         host = Model.Host.objects.get_by_shortname(target_id)
     apply_host_policy(target_id, owner_unit, owner_relation)
     return host
@@ -246,10 +198,6 @@ def apply_host_policy(target_id, owner_unit, owner_relation):
     ssh_service = get_pynag_service(target_id, 'SSH')
     ssh_service.set_attribute('check_command', 'check_ssh')
     ssh_service.save()
-    if owner_unit:
-        units.tag_object(ssh_service.get_suggested_filename(), owner_unit)
-    if owner_relation:
-        relations.tag_object(ssh_service.get_suggested_filename(), owner_relation)
 
 
 def get_valid_relations():
@@ -261,5 +209,25 @@ def get_valid_relations():
         yield x.strip()
 
 
-units = ObjectTagCollection('units')
-relations = ObjectTagCollection('relations')
+def get_valid_units(relation_id):
+    for x in subprocess.Popen(['relation-list', '-r', relation_id], 
+                              stdout=subprocess.PIPE).stdout:
+        yield x.strip()
+
+
+def initialize_inprogress_config():
+    if os.path.exists(INPROGRESS_CONF_D):
+        shutil.rmtree(INPROGRESS_CONF_D)
+    os.mkdir(INPROGRESS_CONF_D)
+
+
+def flush_inprogress_config():
+    if not os.path.exists(INPROGRESS_CONF_D):
+        return
+    if os.path.exists(NAGIOS_CONF_D_BAK):
+        shutil.rmtree(NAGIOS_CONF_D_BAK)
+    if os.path.exists(NAGIOS_CONF_D):
+        shutil.move(NAGIOS_CONF_D, '%s.bak')
+    shutil.move(INPROGRESS_CONF_D, NAGIOS_CONF_D)
+
+

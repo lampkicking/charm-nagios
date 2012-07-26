@@ -24,68 +24,71 @@ import json
 import re
 import string
 
-from common import customize_service, units, relations, get_pynag_host, get_pynag_service, refresh_hostgroups
+from common import (customize_service, get_pynag_host,
+        get_pynag_service, refresh_hostgroups,
+        get_valid_relations, initialize_inprogress_config,
+        flush_inprogress_config)
 
-# Note that one can pass in args positionally, 'monitors.yaml targetid
-# and target-address' so the hook can be tested without being in a hook
-# context.
-#
-if len(sys.argv) > 1:
-    relation_settings = {'monitors': open(sys.argv[1]).read(),
-                         'target-id': sys.argv[2]}
-    if len(sys.argv) > 3:
-        relation_settings['target-address'] = sys.argv[3]
-else:
-    relation_settings = json.loads(
-            subprocess.check_output(['relation-get', '--format=json']).strip())
+def main(argv):
+    # Note that one can pass in args positionally, 'monitors.yaml targetid
+    # and target-address' so the hook can be tested without being in a hook
+    # context.
+    #
+    if len(argv) > 1:
+        relation_settings = {'monitors': open(argv[1]).read(),
+                             'target-id': argv[2]}
+        if len(argv) > 3:
+            relation_settings['target-address'] = argv[3]
+        all_relations = {'monitors:99': {'testing/0': relation_settings}}
+    else:
+        all_relations = {}
+        for relid in get_valid_relations():
+            for unit in get_valid_units(relid):
+                relation_settings = json.loads(
+                        subprocess.check_output(['relation-get', '--format=json',
+                            '-',unit]).strip())
+                if relation_settings is None or relation_settings == '':
+                    continue
+                if ('monitors' not in relation_settings
+                        or 'target-id' not in relation_settings):
+                    continue
+                all_relations[relid][unit] = relation_settings
 
-if relation_settings is None or relation_settings == '':
-    sys.exit(0)
+    initialize_inprogress_config()
+    for relid, units in all_relations.iteritems():
+        apply_relation_config(relid, units)
+    flush_inprogress_config()
+    refresh_hostgroups()
+    os.system('service nagios3 reload')
 
-if ('monitors' not in relation_settings
-        or 'target-id' not in relation_settings):
-    sys.exit(0)
+def apply_relation_config(relid, units):
+    for unit, relation_settings in units.iteritems():
+        monitors = relation_settings['monitors']
+        target_id = relation_settings['target-id']
+        # If not set, we don't mess with it, as multiple services may feed
+        # monitors in for a particular address. Generally a primary will set this
+        # to its own private-address
+        target_address = relation_settings.get('target-address', None)
 
-monitors = relation_settings['monitors']
-target_id = relation_settings['target-id']
-# If not set, we don't mess with it, as multiple services may feed
-# monitors in for a particular address. Generally a primary will set this
-# to its own private-address
-target_address = relation_settings.get('target-address', None)
-# Need this for broken processing
-relation_id = os.environ.get('JUJU_RELATION_ID','testing')
-# Need this for departed
-owner_unit = os.environ.get('JUJU_REMOTE_UNIT','testing/0').replace('/','-')
+        if type(monitors) != dict:
+            monitors = yaml.safe_load(monitors)
 
-if type(monitors) != dict:
-    monitors = yaml.safe_load(monitors)
+        # Output nagios config
+        host = get_pynag_host(target_id)
 
-# Output nagios config
-host = get_pynag_host(target_id)
+        if target_address is not None:
+            host.set_attribute('address', target_address)
+            host.save()
 
-if target_address is not None:
-    # We only tag primaries because of https://launchpad.net/bugs/1025478
-    units.tag_object(host.get_suggested_filename(), owner_unit)
-    relations.tag_object(host.get_suggested_filename(), relation_id)
+        for mon_family, mons in monitors['monitors']['remote'].iteritems():
+            for mon_name, mon in mons.iteritems():
+                service_name = '%s-%s' % (target_id, mon_name)
+                service = get_pynag_service(target_id, service_name)
+                if customize_service(service, mon_family, mon_name, mon):
+                    service.save()
+                else:
+                    print('Ignoring %s due to unknown family %s' % (mon_name,
+                                                                    mon_family))
 
-    host.set_attribute('address', target_address)
-    host.save()
-
-reduce_RE = re.compile('[\W_]')
-
-
-for mon_family, mons in monitors['monitors']['remote'].iteritems():
-    for mon_name, mon in mons.iteritems():
-        service_name = '%s-%s' % (target_id, mon_name)
-        service = get_pynag_service(target_id, service_name)
-        if customize_service(service, mon_family, mon_name, mon):
-            if target_address is not None:
-                units.tag_object(service.get_suggested_filename(), owner_unit)
-                relations.tag_object(service.get_suggested_filename(), relation_id)
-            service.save()
-        else:
-            print('Ignoring %s due to unknown family %s' % (mon_name,
-                                                            mon_family))
-
-refresh_hostgroups()
-os.system('service nagios3 reload')
+if __name__ == '__main__':
+    main(sys.argv)
