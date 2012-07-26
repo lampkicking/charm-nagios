@@ -46,6 +46,7 @@ def main(argv):
             for unit in get_valid_units(relid):
                 relation_settings = json.loads(
                         subprocess.check_output(['relation-get', '--format=json',
+                            '-r', relid,
                             '-',unit]).strip())
                 if relation_settings is None or relation_settings == '':
                     continue
