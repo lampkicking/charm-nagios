@@ -26,8 +26,8 @@ import string
 
 from common import (customize_service, get_pynag_host,
         get_pynag_service, refresh_hostgroups,
-        get_valid_relations, initialize_inprogress_config,
-        flush_inprogress_config)
+        get_valid_relations, get_valid_units,
+        initialize_inprogress_config, flush_inprogress_config)
 
 def main(argv):
     # Note that one can pass in args positionally, 'monitors.yaml targetid

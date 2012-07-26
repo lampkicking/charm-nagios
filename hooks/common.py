@@ -9,14 +9,15 @@ import shutil
 from pynag import Model
 
 INPROGRESS_CONF_D = '/etc/nagios3/inprogress.d'
-NAGIOS_CONF_D = '/etc/nagios3/conf.d'
-NAGIOS_CONF_D_BAK = '/etc/nagios3/conf.d.bak'
+NAGIOS_CONF_D = '/etc/nagios3/charm-conf.d'
+NAGIOS_CONF_D_BAK = '/etc/nagios3/charm-conf.d.bak'
+MAIN_NAGIOS_CFG = '/etc/nagios3/nagios.cfg'
+PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
-Model.cfg_file = '/etc/nagios3/nagios.cfg'
+Model.cfg_file = MAIN_NAGIOS_CFG
 Model.pynag_directory = INPROGRESS_CONF_D
 
 reduce_RE = re.compile('[\W_]')
-PLUGIN_PATH = '/usr/lib/nagios/plugins'
 
 def check_ip(n):
     try:
@@ -219,6 +220,14 @@ def initialize_inprogress_config():
     if os.path.exists(INPROGRESS_CONF_D):
         shutil.rmtree(INPROGRESS_CONF_D)
     os.mkdir(INPROGRESS_CONF_D)
+    my_include_line = "cfg_dir=%s\n" % NAGIOS_CONF_D
+    with open(MAIN_NAGIOS_CFG, 'a+') as cf:
+        cf.seek(0)
+        for line in cf:
+            if line == my_include_line:
+                return
+        cf.write("# Added by %s\n" % __file__)
+        cf.write(my_include_line)
 
 
 def flush_inprogress_config():
@@ -227,7 +236,7 @@ def flush_inprogress_config():
     if os.path.exists(NAGIOS_CONF_D_BAK):
         shutil.rmtree(NAGIOS_CONF_D_BAK)
     if os.path.exists(NAGIOS_CONF_D):
-        shutil.move(NAGIOS_CONF_D, '%s.bak')
+        shutil.move(NAGIOS_CONF_D, NAGIOS_CONF_D_BAK)
     shutil.move(INPROGRESS_CONF_D, NAGIOS_CONF_D)
 
 
