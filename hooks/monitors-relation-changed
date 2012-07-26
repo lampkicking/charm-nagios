@@ -52,13 +52,15 @@ def main(argv):
                 if ('monitors' not in relation_settings
                         or 'target-id' not in relation_settings):
                     continue
+                if relid not in all_relations:
+                    all_relations[relid] = {}
                 all_relations[relid][unit] = relation_settings
 
     initialize_inprogress_config()
     for relid, units in all_relations.iteritems():
         apply_relation_config(relid, units)
-    flush_inprogress_config()
     refresh_hostgroups()
+    flush_inprogress_config()
     os.system('service nagios3 reload')
 
 def apply_relation_config(relid, units):
