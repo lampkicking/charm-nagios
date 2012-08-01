@@ -1,4 +1,10 @@
 #!/bin/sh
 set -e
-juju-log -l WARNING 'Relations have been radically changed. Its best to remove any existing relationships and re-establish them.'
+legacy_relations="`relation-ids legacy`"
+if [ -n "$legacy_relations" ] ; then
+    juju-log -l WARNING 'Relations have been radically changed. The monitoring interface is not supported anymore.'
+    juju-log -l WARNING 'Please use the generic juju-info or the monitors interface'
+fi
+# Refresh these hooks entirely
 hooks/mymonitors-relation-joined
+hooks/monitors-relation-changed

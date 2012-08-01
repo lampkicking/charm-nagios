@@ -24,10 +24,12 @@ import json
 import re
 import string
 
+
 from common import (customize_service, get_pynag_host,
         get_pynag_service, refresh_hostgroups,
         get_valid_relations, get_valid_units,
         initialize_inprogress_config, flush_inprogress_config)
+
 
 def main(argv):
     # Note that one can pass in args positionally, 'monitors.yaml targetid
@@ -43,18 +45,29 @@ def main(argv):
     else:
         all_relations = {}
         for relid in get_valid_relations():
+            (relname, relnum) = relid.split(':')
             for unit in get_valid_units(relid):
                 relation_settings = json.loads(
                         subprocess.check_output(['relation-get', '--format=json',
                             '-r', relid,
                             '-',unit]).strip())
+
                 if relation_settings is None or relation_settings == '':
                     continue
-                if ('monitors' not in relation_settings
-                        or 'target-id' not in relation_settings):
-                    continue
+
+                if relname == 'monitors':
+                    if ('monitors' not in relation_settings
+                            or 'target-id' not in relation_settings):
+                        continue
+                else:
+                    # Fake it for the more generic 'nagios' relation'
+                    relation_settings['target-id'] = unit.replace('/','-')
+                    relation_settings['target-address'] = relation_settings['private-address']
+                    relation_settings['monitors'] = {'monitors': {'remote': {} } }
+
                 if relid not in all_relations:
                     all_relations[relid] = {}
+
                 all_relations[relid][unit] = relation_settings
 
     initialize_inprogress_config()
