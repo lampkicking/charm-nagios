@@ -100,6 +100,7 @@ def _make_check_command(args):
     # command should be enough.
     signature = reduce_RE.sub('_', ''.join(
                 [os.path.basename(arg) for arg in args]))
+    Model.Command.objects.reload_cache()
     try:
         cmd = Model.Command.objects.get_by_shortname(signature)
     except ValueError:

@@ -70,6 +70,21 @@ def main(argv):
 
                 all_relations[relid][unit] = relation_settings
 
+    # Hack to work around http://pad.lv/1025478
+    targets_with_addresses = set()
+    for relid, units in all_relations.iteritems():
+        for unit, relation_settings in units.iteritems():
+            if 'target-address' in relation_settings:
+                targets_with_addresses.add(relation_settings['target-id'])
+    new_all_relations = {}
+    for relid, units in all_relations.iteritems():
+        for unit, relation_settings in units.iteritems():
+            if relation_settings['target-id'] in targets_with_addresses:
+                if relid not in new_all_relations:
+                    new_all_relations[relid] = {}
+                new_all_relations[relid][unit] = relation_settings
+    all_relations = new_all_relations
+
     initialize_inprogress_config()
     for relid, units in all_relations.iteritems():
         apply_relation_config(relid, units)
