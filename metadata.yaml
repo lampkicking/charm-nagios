@@ -1,10 +1,10 @@
-ensemble: formula
 name: nagios
 summary: Nagios monitoring service.
-maintainer: Clint Byrum <clint@ubuntu.com>
+maintainer: Charmers <juju@lists.ubuntu.com>
 description: |
   Nagios is a monitoring and management system for hosts, services, and
   networks.
+categories: ["misc"]
 provides:
   website:
     interface: http
