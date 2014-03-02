@@ -1,15 +1,39 @@
-#!/bin/sh
-set -e
-legacy_relations="`relation-ids legacy`"
-if [ -n "$legacy_relations" ] ; then
-    juju-log -l WARNING 'Relations have been radically changed. The monitoring interface is not supported anymore.'
-    juju-log -l WARNING 'Please use the generic juju-info or the monitors interface'
-fi
-if [ -n "`config-get extraconfig`" ] ; then
-    config-get extraconfig > /etc/nagios3/conf.d/extra.cfg
-else
-    rm -f /etc/nagios3/conf.d/extra.cfg
-fi
-# Refresh these hooks entirely
-hooks/mymonitors-relation-joined
-hooks/monitors-relation-changed
+#!/usr/bin/env python
+
+# Rewritten from bash to python 3/2/2014 for charm helper inclusion of SSL-Everywhere!
+import os
+import subprocess
+from charmhelpers.core import hookenv
+from charmhelpers.core import host
+
+# Gather facts
+legacy_relations = hookenv.config('legacy')
+extra_config = hookenv.config('extraconfig')
+ssl_config = hookenv.config('enable_ssl')
+
+# Checks the charm relations for legacy relations
+# Inserts warnings into the log about legacy relations, as they will be removed
+# in the future
+def warn_legacy_relations():
+    if legacy_relations != None:
+	hookenv.log("Relations have been radically changed."
+		    " The monitoring interface is not supported anymore.", WARNING)
+	hookenv.log("Please use the generic juju-info or the monitors interface", WARNING)
+
+
+# If the charm has extra configuration provided, write that to the
+# proper nagios3 configuration file, otherwise remove the config
+def write_extra_config():
+    # Be predjudice about this - remove the file always.
+    if host.file_hash('/etc/nagios3/conf.d/extra.cfg') != None:
+        os.remove('/etc/nagios3/conf.d/extra.cfg')
+    # If we have a config, then write it. the hook reconfiguration will handle the details
+    if extra_config != None:
+	host.write_file('/etc/nagios3/conf.d/extra.cfg', extra_config)
+
+
+warn_legacy_relations()
+write_extra_config()
+subprocess.call(['hooks/mymonitors-relation-joined'])
+subprocess.call(['hooks/monitors-relation-changed'])
+
