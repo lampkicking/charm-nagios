@@ -5,13 +5,10 @@
 import base64
 from jinja2 import Template
 import os
-from os.path import exists as exist
-from os.path import join
 import shutil
 import subprocess
 from charmhelpers.contrib import ssl
-from charmhelpers.core import hookenv
-from charmhelpers.core import host
+from charmhelpers.core import hookenv, host
 
 
 # Gather facts
@@ -55,9 +52,9 @@ def ssl_configured():
 
 
 # Gather local facts for SSL deployment
-deploy_key_path = join(charm_dir, 'data', '%s.key' % (cert_domain))
-deploy_cert_path = join(charm_dir, 'data', '%s.crt' % (cert_domain))
-deploy_csr_path = join(charm_dir, 'data', '%s.csr' % (cert_domain))
+deploy_key_path = os.path.join(charm_dir, 'data', '%s.key' % (cert_domain))
+deploy_cert_path = os.path.join(charm_dir, 'data', '%s.crt' % (cert_domain))
+deploy_csr_path = os.path.join(charm_dir, 'data', '%s.csr' % (cert_domain))
 # set basename for SSL key locations
 cert_file = '/etc/ssl/certs/%s.pem' % (cert_domain)
 key_file = '/etc/ssl/private/%s.key' % (cert_domain)
@@ -68,8 +65,8 @@ chain_file = '/etc/ssl/certs/%s.csr' % (cert_domain)
 # leave it out of the dir file check and let the config manager
 # worry about it
 def check_ssl_files():
-    key = exist(deploy_key_path)
-    cert = exist(deploy_cert_path)
+    key = os.path.exists(deploy_key_path)
+    cert = os.path.exists(deploy_cert_path)
     if key is False or cert is False:
         return False
     return True
@@ -80,7 +77,7 @@ def copy_ssl_keys():
      #We are copying keys, do so now
     shutil.copy(deploy_cert_path, cert_file)
     shutil.copy(deploy_key_path, key_file)
-    if exist(deploy_csr_path):
+    if os.path.exists(deploy_csr_path):
         shutil.copy(deploy_csr_path, chain_file)
 
 
@@ -122,7 +119,7 @@ def enable_ssl():
 # note: i tried to use cheetah, and it barfed, several times. It can go play
 # in a fire. I'm jusing jinja2.
 def update_apache():
-    if exist(chain_file):
+    if os.path.exists(chain_file):
         ssl_chain = chain_file
     template_values = {'ssl_key': key_file,
                        'ssl_cert': cert_file,

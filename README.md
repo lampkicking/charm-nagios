@@ -39,12 +39,11 @@ Will get you the public IP of the web interface.
 - `ssl_chain` - Base64 encoded SSL Chain. Deploys to configured ssl_domain chain authority as `/etc/ssl/certs/{ssl_domain}.csr`
 
 - `ssl_domain` - FQDN of service. This sets a few important settings in the charm and
-has additional functionality. If a .crt, .key, and .csr are located in `data` of the charmdir with the configured ssl_domain as the name (eg: `example.com.crt`) , they will be used in leu of any base64 encoded values in the config. This allows users not comfortable with using base64 encoding to populate config values to deploy SSL keys without the need of encoding the contents.
+has additional functionality. If a .crt, .key, and .csr are located in `data` of the charmdir with the configured ssl_domain as the name (eg: `example.com.crt`) , they will be used in leu of any base64 encoded values in the config. This allows users not comfortable with using base64 encoding to populate config values to deploy SSL keys without the need of encoding the contents. To do this, you will want to ensure you have a remote source (in bzr or git) for upstream so you can backport patches into your charm. ** This breaks easy upgrades from the charm store! **
 
-#### workflow:
-
+#### ssl file deployment workflow:
 ```
-charm get lp:charms/nagios
+charm get nagios
 cd nagios
 mkdir -p data
 cp ~/my.crt data/example.com.crt
@@ -52,6 +51,17 @@ cp ~/my.csr data/example.com.csr
 cp ~/my.key data/example.com.key
 juju deploy --repository=../ local:nagios
 juju set nagios domain=example.com
+```
+
+#### Typical SSL Workflow:
+
+```
+juju deply nagios central-monitor
+juju set central-monitor ssl_cert=`base64 mykey.pem`
+juju set central-monitor ssl_key=`base64 mykey.key`
+juju set central-monitor ssl_chain=`base64 mykey.csr`
+juju set central-monitor domain=example.com
+juju set ssl=on
 ```
 
 ### Known Issues / Caveates
