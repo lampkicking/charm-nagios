@@ -143,6 +143,7 @@ def update_apache():
         subprocess.call(['a2ensite', 'default'])
         hookenv.open_port(80)
     subprocess.call(['a2ensite', 'default-ssl'])
+    subprocess.call(['a2enmod', 'ssl'])
     hookenv.open_port(443)
     host.service_reload('apache2')
 
