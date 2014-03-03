@@ -135,7 +135,12 @@ def update_apache():
         f.write(t.render(template_values))
     if ssl == "only":
         subprocess.call(['a2dissite', 'default'])
+        subprocess.call(['close-port', '80'])
+    else:
+        subprocess.call(['a2ensite', 'default'])
+        subprocess.call(['open-port', '80'])
     subprocess.call(['a2ensite', 'default-ssl'])
+    subprocess.call('open-port', '443')
     host.service_reload('apache2')
 
 
