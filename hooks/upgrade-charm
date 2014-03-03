@@ -100,6 +100,10 @@ def enable_ssl():
 
     #Validate that we have configs, and generate a self signed certificate.
     if str(hookenv.config('ssl_cert')).lower() == "selfsigned":
+        # bail if keys already exist
+        if os.path.exists(cert_file):
+            hookenv.log("Keys exist, not self signing! Abort!", "WARNING")
+            return
         # Generate a self signed key using CharmHelpers
         hookenv.log("Generating Self Signed Certificate", "INFO")
         ssl.generate_selfsigned(key_file, cert_file, cn=cert_domain)
