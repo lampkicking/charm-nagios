@@ -121,6 +121,8 @@ def enable_ssl():
 def update_apache():
     if os.path.exists(chain_file):
         ssl_chain = chain_file
+    else:
+        ssl_chain = None
     template_values = {'ssl_key': key_file,
                        'ssl_cert': cert_file,
                        'ssl_chain': ssl_chain}
@@ -132,12 +134,12 @@ def update_apache():
         f.write(t.render(template_values))
     if ssl == "only":
         subprocess.call(['a2dissite', 'default'])
-        subprocess.call(['close-port', '80'])
+        hookenv.close_port(80)
     else:
         subprocess.call(['a2ensite', 'default'])
-        subprocess.call(['open-port', '80'])
+        hookenv.open_port(80)
     subprocess.call(['a2ensite', 'default-ssl'])
-    subprocess.call('open-port', '443')
+    hookenv.open_port(443)
     host.service_reload('apache2')
 
 
