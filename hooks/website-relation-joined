@@ -1,2 +1,8 @@
 #!/bin/sh
-relation-set hostname=`unit-get private-address` port=80
+local ssl=`config-get ssl`
+
+if [ $ssl == "only" ]; then
+    relation-set hostname=`unit-get private-address` port=443
+else
+    relation-set hostname=`unit-get private-address` port=80
+fi
