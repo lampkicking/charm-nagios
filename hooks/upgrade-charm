@@ -16,7 +16,7 @@ legacy_relations = hookenv.config('legacy')
 extra_config = hookenv.config('extraconfig')
 ssl_config = hookenv.config('ssl')
 charm_dir = os.environ['CHARM_DIR']
-cert_domain = hookenv.config('ssl_domain')
+cert_domain = hookenv.unit_get('public-address')
 
 
 # Checks the charm relations for legacy relations
@@ -44,8 +44,7 @@ def write_extra_config():
 
 
 def ssl_configured():
-    allowed_options = ["on", "forced"]
-
+    allowed_options = ["on", "only"]
     if str(ssl_config).lower() in allowed_options:
         return True
     return False
@@ -72,15 +71,6 @@ def check_ssl_files():
     return True
 
 
-# Copy SSL keys from charms data dir to respective locations
-def copy_ssl_keys():
-     #We are copying keys, do so now
-    shutil.copy(deploy_cert_path, cert_file)
-    shutil.copy(deploy_key_path, key_file)
-    if os.path.exists(deploy_csr_path):
-        shutil.copy(deploy_csr_path, chain_file)
-
-
 # Decode the SSL keys from their base64 encoded values in the configuration
 def decode_ssl_keys():
     if hookenv.config('ssl_key'):
@@ -99,31 +89,26 @@ def enable_ssl():
     # Set the basename of all ssl files
 
     #Validate that we have configs, and generate a self signed certificate.
-    if str(hookenv.config('ssl_cert')).lower() == "selfsigned":
+    if not hookenv.config('ssl_cert'):
         # bail if keys already exist
         if os.path.exists(cert_file):
-            hookenv.log("Keys exist, not self signing! Abort!", "WARNING")
+            hookenv.log("Keys exist, not creating keys!", "WARNING")
             return
         # Generate a self signed key using CharmHelpers
         hookenv.log("Generating Self Signed Certificate", "INFO")
         ssl.generate_selfsigned(key_file, cert_file, cn=cert_domain)
     else:
-        #Determine if we need to copy files or decode them
-        if check_ssl_files():
-            copy_ssl_keys()
-            hookenv.log("Copied SSL files, bailing", "DEBUG")
-            return
         decode_ssl_keys()
-        hookenv.log("Decoded SSL files, bailing", "DEBUG")
+        hookenv.log("Decoded SSL files", "INFO")
 
 
-# Nagios3 is deployed as a global apache application from the archives.
+# Nagios3 is deployed as a global apache application from the archive.
 # We'll get a little funky and add the SSL keys to the default-ssl config
 # which sets our keys, including the self-signed ones, as the host keyfiles.
 # note: i tried to use cheetah, and it barfed, several times. It can go play
 # in a fire. I'm jusing jinja2.
 def update_apache():
-    if os.path.exists(chain_file):
+    if os.path.exists(chain_file) and os.path.getsize(chain_file) > 0:
         ssl_chain = chain_file
     else:
         ssl_chain = None
@@ -136,15 +121,22 @@ def update_apache():
     t = Template(templateDef)
     with open('/etc/apache2/sites-available/default-ssl', 'w') as f:
         f.write(t.render(template_values))
-    if ssl == "only":
+    print("Value of ssl is %s" % ssl)
+    if ssl_config == "only":
         subprocess.call(['a2dissite', 'default'])
         hookenv.close_port(80)
+        subprocess.call(['a2ensite', 'default-ssl'])
+        subprocess.call(['a2enmod', 'ssl'])
+    elif ssl_config == "on":
+        subprocess.call(['a2ensite', 'default-ssl'])
+        subprocess.call(['a2enmod', 'ssl'])
+        hookenv.open_port(443)
     else:
+        subprocess.call(['a2dissite', 'default-ssl'])
+        hookenv.close_port(443)
         subprocess.call(['a2ensite', 'default'])
         hookenv.open_port(80)
-    subprocess.call(['a2ensite', 'default-ssl'])
-    subprocess.call(['a2enmod', 'ssl'])
-    hookenv.open_port(443)
+
     host.service_reload('apache2')
 
 
@@ -152,7 +144,7 @@ warn_legacy_relations()
 write_extra_config()
 if ssl_configured():
     enable_ssl()
-    update_apache()
+update_apache()
 
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])

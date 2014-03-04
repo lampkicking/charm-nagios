@@ -40,7 +40,7 @@ def get_ip_and_hostname(remote_unit, relation_id=None):
     if relation_id is not None:
         args.extend(['-r', relation_id])
     hostname = subprocess.check_output(args).strip()
-        
+
     if hostname is None or not len(hostname):
         print "relation-get failed"
         return 2
@@ -54,7 +54,7 @@ def get_ip_and_hostname(remote_unit, relation_id=None):
 
 def refresh_hostgroups():
     """ Not the most efficient thing but since we're only
-        parsing what is already on disk here its not too bad """ 
+        parsing what is already on disk here its not too bad """
     hosts = [ x['host_name'] for x in Model.Host.objects.all if x['host_name'] ]
 
     hgroups = {}
@@ -209,16 +209,16 @@ def apply_host_policy(target_id, owner_unit, owner_relation):
 
 
 def get_valid_relations():
-    for x in subprocess.Popen(['relation-ids', 'monitors'], 
+    for x in subprocess.Popen(['relation-ids', 'monitors'],
         stdout=subprocess.PIPE).stdout:
         yield x.strip()
-    for x in subprocess.Popen(['relation-ids', 'nagios'], 
+    for x in subprocess.Popen(['relation-ids', 'nagios'],
         stdout=subprocess.PIPE).stdout:
         yield x.strip()
 
 
 def get_valid_units(relation_id):
-    for x in subprocess.Popen(['relation-list', '-r', relation_id], 
+    for x in subprocess.Popen(['relation-list', '-r', relation_id],
                               stdout=subprocess.PIPE).stdout:
         yield x.strip()
 
@@ -247,8 +247,8 @@ def flush_inprogress_config():
     if not os.path.exists(INPROGRESS_DIR):
         return
     _replace_in_config(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
-    if os.path.exists(MAIN_NAGIOS_BAK):
-        shutil.rmtree(MAIN_NAGIOS_BAK)
-    if os.path.exists(MAIN_NAGIOS_DIR):
-        shutil.move(MAIN_NAGIOS_DIR, MAIN_NAGIOS_BAK)
-    shutil.move(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
+    #if os.path.exists(MAIN_NAGIOS_BAK):
+        #shutil.rmtree(MAIN_NAGIOS_BAK)
+    #if os.path.exists(MAIN_NAGIOS_DIR):
+        #shutil.move(MAIN_NAGIOS_DIR, MAIN_NAGIOS_BAK)
+    #shutil.move(INPROGRESS_DIR, MAIN_NAGIOS_DIR)

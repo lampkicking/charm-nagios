@@ -61,7 +61,7 @@
 	#   certificate for convinience.
 	#SSLCertificateChainFile /etc/apache2/ssl.crt/server-ca.crt
 {%if ssl_chain %}
-	SSLCertificateChainFile $ssl_chain
+	SSLCertificateChainFile {{ssl_chain}}
 {% endif %}
 
 
