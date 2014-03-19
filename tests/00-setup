@@ -2,4 +2,4 @@
 
 sudo add-apt-repository -y ppa:juju/stable
 apt-get update
-sudo apt-get install -y amulet python3-requests
+sudo apt-get install -y amulet juju-local python3-requests
