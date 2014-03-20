@@ -41,7 +41,7 @@ def main(argv):
                              'target-id': argv[2]}
         if len(argv) > 3:
             relation_settings['target-address'] = argv[3]
-        all_relations = {'monitors:99': {'ftesting/0': relation_settings}}
+        all_relations = {'monitors:99': {'testing/0': relation_settings}}
     else:
         all_relations = {}
         for relid in get_valid_relations():

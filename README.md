@@ -39,14 +39,21 @@ Will get you the public IP of the web interface.
 - `ssl_chain` - Base64 encoded SSL Chain. Deploys to configured ssl_domain chain authority as `/etc/ssl/certs/{ssl_domain}.csr`
 
 
-#### Typical SSL Workflow:
+#### Typical SSL Workflow for Self Signed Keys:
+
+```
+juju deply nagios central-monitor
+juju set ssl=on
+```
+
+If you purchased keys from a certificate authority:
 
 ```
 juju deply nagios central-monitor
 juju set central-monitor ssl_cert=`base64 mykey.pem`
 juju set central-monitor ssl_key=`base64 mykey.key`
 juju set central-monitor ssl_chain=`base64 mykey.csr`
-juju set ssl=on
+juju set central-monitor ssl=on
 ```
 
 ### Known Issues / Caveates
@@ -81,3 +88,4 @@ The monitors interface expects three fields:
 - [Nagios homepage](http://nagios.org)
 - [Nagios documentation](http://www.nagios.org/documentation)
 - [Nagios support](http://www.nagios.org/support)
+<span id="scroll_mark"></span>
