@@ -1,1 +1,4 @@
-data
+data/*.pem
+data/*.key
+data/*.crt
+data/*.csr
