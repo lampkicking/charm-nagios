@@ -261,5 +261,5 @@ def flush_inprogress_config():
     if os.path.exists(MAIN_NAGIOS_DIR):
         shutil.move(MAIN_NAGIOS_DIR, MAIN_NAGIOS_BAK)
     shutil.move(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
-# now that directory has been changed need to update the config file to reflect the real stuff..
+    # now that directory has been changed need to update the config file to reflect the real stuff..
     _commit_in_config(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
