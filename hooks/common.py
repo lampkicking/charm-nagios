@@ -233,6 +233,16 @@ def _replace_in_config(find_me, replacement):
             os.unlink(INPROGRESS_CFG)
             os.rename(new_cf.name, INPROGRESS_CFG)
 
+def _commit_in_config(find_me, replacement):
+    with open(MAIN_NAGIOS_CFG) as cf:
+        with tempfile.NamedTemporaryFile(dir=MAIN_NAGIOS_DIR, delete=False) as new_cf:
+            for line in cf:
+                new_cf.write(line.replace(find_me, replacement))
+            new_cf.flush()
+            os.chmod(new_cf.name, 0644)
+            os.unlink(MAIN_NAGIOS_CFG)
+            os.rename(new_cf.name, MAIN_NAGIOS_CFG)
+
 
 def initialize_inprogress_config():
     if os.path.exists(INPROGRESS_DIR):
@@ -246,9 +256,10 @@ def initialize_inprogress_config():
 def flush_inprogress_config():
     if not os.path.exists(INPROGRESS_DIR):
         return
-    _replace_in_config(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
-    #if os.path.exists(MAIN_NAGIOS_BAK):
-        #shutil.rmtree(MAIN_NAGIOS_BAK)
-    #if os.path.exists(MAIN_NAGIOS_DIR):
-        #shutil.move(MAIN_NAGIOS_DIR, MAIN_NAGIOS_BAK)
-    #shutil.move(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
+    if os.path.exists(MAIN_NAGIOS_BAK):
+        shutil.rmtree(MAIN_NAGIOS_BAK)
+    if os.path.exists(MAIN_NAGIOS_DIR):
+        shutil.move(MAIN_NAGIOS_DIR, MAIN_NAGIOS_BAK)
+    shutil.move(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
+# now that directory has been changed need to update the config file to reflect the real stuff..
+    _commit_in_config(INPROGRESS_DIR, MAIN_NAGIOS_DIR)
