@@ -2,6 +2,10 @@
 
 set -ue
 
+# 'apt-get update' can encounter transient failures when the archive servers
+# are being updated. To handle this case, just call it a few times.
+apt-get update || apt-get update || apt-get update
+
 apt-get -y install pwgen
 
 PASSWD_FILE="/var/lib/juju/nagios.passwd"
