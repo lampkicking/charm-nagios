@@ -145,6 +145,7 @@ write_extra_config()
 if ssl_configured():
     enable_ssl()
 update_apache()
+update_localhost_cfg()
 
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])

@@ -1,37 +1,47 @@
 #!/bin/bash
 
-set -ue
+set -uex
 
 # 'apt-get update' can encounter transient failures when the archive servers
 # are being updated. To handle this case, just call it a few times.
 apt-get update || apt-get update || apt-get update
 
-apt-get -y install pwgen
+apt-get -y install pwgen --force-yes
 
 PASSWD_FILE="/var/lib/juju/nagios.passwd"
 if [[ -e $PASSWD_FILE ]] ; then
-	PASSWORD=$(cat $PASSWD_FILE)
+  PASSWORD=$(cat $PASSWD_FILE)
 else
-	PASSWORD=$(pwgen 10 1)
-	echo $PASSWORD >$PASSWD_FILE
-	chmod 0400 $PASSWD_FILE
+  PASSWORD=$(pwgen 10 1)
+  echo $PASSWORD >$PASSWD_FILE
+  chmod 0400 $PASSWD_FILE
 fi
 
 echo nagios3-cgi nagios3/adminpassword password $PASSWORD | debconf-set-selections
 echo nagios3-cgi nagios3/adminpassword-repeat password $PASSWORD | debconf-set-selections
 
 DEBIAN_FRONTEND=noninteractive apt-get -qy \
-	install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin
-
-# Ideally these would be moved into the distro ASAP
-if [ -d debs ] ; then
-    dpkg -i debs/*.deb
-fi
+  install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin pynag
 
 # enable external commands per README.Debian file
 if ! grep '^check_external_commands=1$' /etc/nagios3/nagios.cfg ; then
     echo check_external_commands=1 >> /etc/nagios3/nagios.cfg
 fi
+
+if [ -f $CHARM_DIR/files/hostgroups_nagios2.cfg ]; then
+    # Write the new hostgroups_nagios2.cfg file to prevent servers being classified as Debian.
+    cp -v $CHARM_DIR/files/hostgroups_nagios2.cfg /etc/nagios3/conf.d/hostgroups_nagios2.cfg
+    # Remove the services configuration file to eliminiate the need for ssh and localhost groups.
+    rm -v /etc/nagios3/conf.d/services_nagios2.cfg
+    # Remove the ext file to eliminate the need for ssh and localhost groups.
+    rm -v /etc/nagios3/conf.d/extinfo_nagios2.cfg
+fi
+
+if [ -f $CHARM_DIR/files/index.html ]; then
+    # Replace the default index.html file to redirect to nagios3/
+    cp -v $CHARM_DIR/files/index.html /var/www/html/index.html
+fi
+
 # || :'s are for idempotency
 service nagios3 stop || :
 dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw || :
