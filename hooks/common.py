@@ -170,8 +170,10 @@ def customize_nrpe(service, name, extra):
 
 def customize_service(service, family, name, extra):
     customs = {'http': customize_http,
-                'mysql': customize_mysql,
-                'nrpe': customize_nrpe}
+               'mysql': customize_mysql,
+               'nrpe': customize_nrpe,
+               'tcp': customize_tcp,
+              }
     if family in customs:
         return customs[family](service, name, extra)
     return False
