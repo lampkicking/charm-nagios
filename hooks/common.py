@@ -177,12 +177,55 @@ def customize_nrpe(service, name, extra):
     service.set_attribute('check_command', cmd)
     return True
 
+def customize_rpc(service, name, extras):
+    """ Customize the check_rpc plugin to check things like nfs."""
+    plugin = os.path.join(PLUGIN_PATH, 'check_rpc')
+    args = []
+    # /usr/lib/nagios/plugins/check_rpc -H <host> -C <rpc_command>
+    cmd_args = [plugin, '-H', '$HOSTADDRESS$']
+    if 'rpc_command' in extra:
+      cmd_args.extend(('-C', extra['rpc_command']))
+    if 'program_version' in extra:
+      cmd_args.extend(('-c', extra['program_version']))
+
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
+
+  def customize_tcp(service, name, extras):
+      """ Customize tcp can be used to check things like memcached. """
+      plugin = os.path.join(PLUGIN_PATH, 'check_tcp')
+      args = []
+      # /usr/lib/nagios/plugins/check_tcp -H <host> -E
+      cmd_args = [plugin, '-H', '$HOSTADDRESS$', '-E']
+      if 'port' in extra:
+        cmd_args.extend(('-p%s' % extra['port']))
+      if 'string' in extra:
+        cmd_args.extend(('-s', extra['string']))
+      if 'expect' in extra:
+        cmd_args.extend(('-e', extra['expect']))
+      if 'warning' in extra:
+        cmd_args.extend(('-w%s' % extra['warning']))
+      if 'critical' in extra:
+        cmd_args.extend(('-c%s' % extra['critical']))
+      if 'timeout' in extra:
+        cmd_args.extend(('-t%s' % extra['timeout']))
+
+      check_command = _make_check_command(cmd_args)
+      cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+      service.set_attribute('check_command', cmd)
+      return True
+
 
 def customize_service(service, family, name, extra):
+    """ The monitors.yaml names are mapped to methods that customize services. """
     customs = {'http': customize_http,
                'mysql': customize_mysql,
                'nrpe': customize_nrpe,
                'tcp': customize_tcp,
+               'rpc': customize_rpc,
                'pgsql': customize_pgsql,
               }
     if family in customs:
