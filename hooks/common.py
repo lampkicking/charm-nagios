@@ -152,6 +152,16 @@ def customize_mysql(service, name, extra):
     return True
 
 
+def customize_pgsql(service, name, extra):
+    plugin = os.path.join(PLUGIN_PATH, 'check_pgsql')
+    args = []
+    cmd_args = [plugin, '-H', '$HOSTADDRESS$']
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
+
 def customize_nrpe(service, name, extra):
     plugin = os.path.join(PLUGIN_PATH, 'check_nrpe')
     args = []
@@ -173,6 +183,7 @@ def customize_service(service, family, name, extra):
                'mysql': customize_mysql,
                'nrpe': customize_nrpe,
                'tcp': customize_tcp,
+               'pgsql': customize_pgsql,
               }
     if family in customs:
         return customs[family](service, name, extra)
