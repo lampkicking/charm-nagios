@@ -79,13 +79,13 @@ def refresh_hostgroups():
         try:
             hgroup = Model.Hostgroup.objects.get_by_shortname(hgroup_name)
             hgroup.delete()
-        except ValueError:
+        except (ValueError, KeyError):
             pass
 
     for hgroup_name, members in hgroups.iteritems():
         try:
             hgroup = Model.Hostgroup.objects.get_by_shortname(hgroup_name)
-        except ValueError:
+        except (ValueError, KeyError):
             hgroup = Model.Hostgroup()
             hgroup.set_filename(CHARM_CFG)
             hgroup.set_attribute('hostgroup_name', hgroup_name)
@@ -104,7 +104,7 @@ def _make_check_command(args):
     Model.Command.objects.reload_cache()
     try:
         cmd = Model.Command.objects.get_by_shortname(signature)
-    except ValueError:
+    except (ValueError, KeyError):
         cmd = Model.Command()
         cmd.set_attribute('command_name', signature)
         cmd.set_attribute('command_line', ' '.join(args))
@@ -179,14 +179,31 @@ def customize_service(service, family, name, extra):
     return False
 
 
+def update_localhost():
+  """ Update the localhost definition to use the ubuntu icons."""
+  hosts = Model.Host.objects.filter(host_name='localhost',
+                                    object_type='host')
+  for host in hosts:
+     host.icon_image='base/ubuntu.png'
+     host.icon_image_alt='Ubuntu Linux'
+     host.vrml_image='ubuntu.png'
+     host.statusmap_image='base/ubuntu.gd2'
+     host.save()
+
+
 def get_pynag_host(target_id, owner_unit=None, owner_relation=None):
     try:
         host = Model.Host.objects.get_by_shortname(target_id)
-    except ValueError:
+    except (ValueError, KeyError):
         host = Model.Host()
         host.set_filename(CHARM_CFG)
         host.set_attribute('host_name', target_id)
         host.set_attribute('use', 'generic-host')
+        # Adding the ubuntu icon image definitions to the host.
+        host.set_attribute('icon_image', 'base/ubuntu.png')
+        host.set_attribute('icon_image_alt', 'Ubuntu Linux')
+        host.set_attribute('vrml_image', 'ubuntu.png')
+        host.set_attribute('statusmap_image', 'base/ubuntu.gd2')
         host.save()
         host = Model.Host.objects.get_by_shortname(target_id)
     apply_host_policy(target_id, owner_unit, owner_relation)
