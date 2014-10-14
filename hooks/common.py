@@ -180,15 +180,18 @@ def customize_service(service, family, name, extra):
 
 
 def update_localhost():
-  """ Update the localhost definition to use the ubuntu icons."""
-  hosts = Model.Host.objects.filter(host_name='localhost',
-                                    object_type='host')
-  for host in hosts:
-     host.icon_image='base/ubuntu.png'
-     host.icon_image_alt='Ubuntu Linux'
-     host.vrml_image='ubuntu.png'
-     host.statusmap_image='base/ubuntu.gd2'
-     host.save()
+    """ Update the localhost definition to use the ubuntu icons."""
+
+    Model.cfg_file = MAIN_NAGIOS_CFG
+    Model.pynag_directory = os.path.join(MAIN_NAGIOS_DIR, 'conf.d')
+    hosts = Model.Host.objects.filter(host_name='localhost',
+                                      object_type='host')
+    for host in hosts:
+        host.icon_image='base/ubuntu.png'
+        host.icon_image_alt='Ubuntu Linux'
+        host.vrml_image='ubuntu.png'
+        host.statusmap_image='base/ubuntu.gd2'
+        host.save()
 
 
 def get_pynag_host(target_id, owner_unit=None, owner_relation=None):

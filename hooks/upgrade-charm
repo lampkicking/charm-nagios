@@ -10,6 +10,7 @@ import subprocess
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
 
+from common import update_localhost
 
 # Gather facts
 legacy_relations = hookenv.config('legacy')
@@ -145,7 +146,7 @@ write_extra_config()
 if ssl_configured():
     enable_ssl()
 update_apache()
-update_localhost_cfg()
+update_localhost()
 
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])
