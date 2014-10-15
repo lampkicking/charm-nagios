@@ -203,7 +203,7 @@ def customize_tcp(service, name, extra):
     if 'port' in extra:
       cmd_args.extend(('-p', extra['port']))
     if 'string' in extra:
-      cmd_args.extend(('-s', extra['string']))
+      cmd_args.extend(('-s', "'{}'".format(extra['string'])))
     if 'expect' in extra:
       cmd_args.extend(('-e', extra['expect']))
     if 'warning' in extra:
