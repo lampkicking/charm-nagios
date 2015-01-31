@@ -3,7 +3,7 @@
 import amulet
 import requests
 
-seconds = 200
+seconds = 20000
 
 d = amulet.Deployment(series='trusty')
 
@@ -13,7 +13,7 @@ d.add('mediawiki')
 
 d.relate('mysql:db', 'mediawiki:db')
 d.relate('nagios:monitors', 'mysql:monitors')
-d.relate('nagios:monitors', 'mediawiki:monitors')
+d.relate('nagios:nagios', 'mediawiki:juju-info')
 
 d.expose('nagios')
 
@@ -45,4 +45,18 @@ def test_web_interface_is_protected():
     if r.status_code != 200:
         amulet.raise_status(amulet.FAIL, msg="Web Admin login failed")
 
+
+def test_hosts_being_monitored():
+    nagpwd = nagios_unit.file_contents('/var/lib/juju/nagios.passwd').strip()
+    host_url = ("http://%s/cgi-bin/nagios3/status.cgi?"
+                "hostgroup=all&style=hostdetail")
+    r = requests.get(host_url % nagios_unit.info['public-address'],
+                     auth=('nagiosadmin', nagpwd))
+    if not (r.text.find('mysql') and r.text.find('mediawiki')):
+        amulet.raise_status(amulet.ERROR,
+                            msg='Nagios is not monitoring the' +
+                            ' hosts it supposed to.')
+
+
 test_web_interface_is_protected()
+test_hosts_being_monitored()
