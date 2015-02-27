@@ -23,6 +23,7 @@ d.expose('nagios')
 
 try:
     d.setup(timeout=seconds)
+    d.sentry.wait()
 except amulet.helpers.TimeoutError:
     amulet.raise_status(amulet.SKIP, msg="Environment wasn't stood up in time")
 except:
@@ -53,12 +54,12 @@ def test_web_interface_is_protected():
 def test_hosts_being_monitored():
     nagpwd = nagios_unit.file_contents('/var/lib/juju/nagios.passwd').strip()
     host_url = ("http://%s/cgi-bin/nagios3/status.cgi?"
-                "hostgroup=all&style=hostdetail")
+                "host=all")
     r = requests.get(host_url % nagios_unit.info['public-address'],
                      auth=('nagiosadmin', nagpwd))
-    if not (r.text.find('mysql') and r.text.find('mediawiki')):
+    if not (r.text.find('mysql-0-mem') and r.text.find('mediawiki-0-mem')):
         amulet.raise_status(amulet.ERROR,
-                            msg='Nagios is not monitoring the' +
+                            msg='Nagios nrpe is not monitoring the' +
                             ' hosts it supposed to.')
 
 

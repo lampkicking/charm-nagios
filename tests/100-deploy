@@ -10,7 +10,7 @@ import requests
 seconds = 3000
 
 
-d = amulet.Deployment()
+d = amulet.Deployment(series='trusty')
 
 d.add('haproxy')
 d.add('nagios')
