@@ -5,18 +5,27 @@
 import base64
 from jinja2 import Template
 import os
-import shutil
+import re
+import pwd
+import grp
+import stat
+import errno
+# import shutil
 import subprocess
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
+from charmhelpers import fetch
 
 
 # Gather facts
 legacy_relations = hookenv.config('legacy')
 extra_config = hookenv.config('extraconfig')
+enable_livestatus = hookenv.config('enable_livestatus')
+livestatus_path = hookenv.config('livestatus_path')
 ssl_config = hookenv.config('ssl')
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
+nagios_cfg = "/etc/nagios3/nagios.cfg"
 
 
 # Checks the charm relations for legacy relations
@@ -41,6 +50,59 @@ def write_extra_config():
     # handle the details
     if extra_config is not None:
         host.write_file('/etc/nagios3/conf.d/extra.cfg', extra_config)
+
+
+# Equivalent of mkdir -p, since we can't rely on 
+# python 3.2 os.makedirs exist_ok argument
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+
+# Fix the path to be world executable
+def fixpath(path):
+    if os.path.isdir(path):
+        st = os.stat(path)
+        os.chmod(path, st.st_mode | stat.S_IXOTH)
+    if path != "/":
+        fixpath(os.path.split(path)[0])
+
+
+def enable_livestatus_config():
+    if enable_livestatus:
+        fetch.apt_update()
+        fetch.apt_install('check-mk-livestatus')
+        broker = re.compile("^broker_module=")
+        broker_found = False
+        for line in open(nagios_cfg):
+            if broker.match(line):
+                broker_found = True
+                break
+
+        if not broker_found:
+            with open(nagios_cfg, "a") as nagiosfile:
+                broker_str = "broker_module=/usr/lib/check_mk/livestatus.o " . livestatus_path
+                nagiosfile.write(broker_str)
+            nagiosfile.close()
+
+        # Make the directory and fix perms on it
+        livestatus_path = hookenv.config('livestatus_path')
+        livestatus_dir = os.path.dirname(livestatus_path)
+        if not os.path.isdir(livestatus_dir):
+            mkdir_p(livestatus_dir)
+        fixpath(livestatus_dir)
+
+        # Fix the perms on the socket
+        uid = pwd.getpwnam("nagios").pw_uid
+        gid = grp.getgrnam("www-data").gr_gid
+        os.chown(livestatus_path, uid, gid)
+        st = os.stat(livestatus_path)
+        os.chmod(livestatus_path, st.st_mode | stat.S_IRGRP)
 
 
 def ssl_configured():
@@ -88,7 +150,7 @@ def decode_ssl_keys():
 def enable_ssl():
     # Set the basename of all ssl files
 
-    #Validate that we have configs, and generate a self signed certificate.
+    # Validate that we have configs, and generate a self signed certificate.
     if not hookenv.config('ssl_cert'):
         # bail if keys already exist
         if os.path.exists(cert_file):

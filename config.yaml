@@ -34,3 +34,13 @@ options:
         description: |
             base64 encoded chain certificates file.  If ssl_cert is
             blank, this will be ignored.
+    enable_livestatus:
+        type: boolean
+        default: false
+        description: |
+            Config variable to enable livestatus module or not.
+    livestatus_path:
+        type: string
+        default: "/var/lib/nagios3/livestatus/socket"
+        description: |
+            Default path to livestatus socket, if enabled via enable_livestatus

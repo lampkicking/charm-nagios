@@ -21,7 +21,7 @@ echo nagios3-cgi nagios3/adminpassword password $PASSWORD | debconf-set-selectio
 echo nagios3-cgi nagios3/adminpassword-repeat password $PASSWORD | debconf-set-selections
 
 DEBIAN_FRONTEND=noninteractive apt-get -qy \
-	install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin
+	install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin 
 
 # Ideally these would be moved into the distro ASAP
 if [ -d debs ] ; then
@@ -32,6 +32,24 @@ fi
 if ! grep '^check_external_commands=1$' /etc/nagios3/nagios.cfg ; then
     echo check_external_commands=1 >> /etc/nagios3/nagios.cfg
 fi
+
+enable_livestatus=$(config-get enable_livestatus)
+livestatus_path=$(config-get livestatus_path)
+livestatus_dir=$(dirname $livestatus_path)
+
+if [ "$enable_livestatus" ]; then 
+    # install check-mk-livestatus
+    DEBIAN_FRONTEND=noninteractive apt-get -qy install check-mk-livestatus
+    # enable livestatus broker
+    if ! grep '^broker_module=' /etc/nagios3/nagios.cfg ; then
+        echo "broker_module=/usr/lib/check_mk/livestatus.o $livestatus_path" >> /etc/nagios3/nagios.cfg
+    fi
+    # fix permissions on the livestatus directory
+    mkdir -p $livestatus_dir
+    chown nagios:www-data $livestatus_dir
+    chmod g+w $livestatus_dir
+fi
+
 # || :'s are for idempotency
 service nagios3 stop || :
 dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw || :
