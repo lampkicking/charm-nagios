@@ -204,6 +204,7 @@ def update_apache():
 
 warn_legacy_relations()
 write_extra_config()
+enable_livestatus_config()
 if ssl_configured():
     enable_ssl()
 update_apache()
