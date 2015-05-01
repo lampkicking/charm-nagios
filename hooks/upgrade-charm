@@ -75,6 +75,7 @@ def fixpath(path):
 
 def enable_livestatus_config():
     if enable_livestatus:
+        hookenv.log("Livestatus is enabled")
         fetch.apt_update()
         fetch.apt_install('check-mk-livestatus')
         broker = re.compile("^broker_module=")
@@ -82,6 +83,7 @@ def enable_livestatus_config():
         for line in open(nagios_cfg):
             if broker.match(line):
                 broker_found = True
+                hookenv.log("broker_module line exists, not adding..")
                 break
 
         if not broker_found:
@@ -91,13 +93,19 @@ def enable_livestatus_config():
             nagiosfile.close()
 
         # Make the directory and fix perms on it
+        hookenv.log("Fixing perms on livestatus_path")
         livestatus_path = hookenv.config('livestatus_path')
         livestatus_dir = os.path.dirname(livestatus_path)
         if not os.path.isdir(livestatus_dir):
+            hookenv.log("Making path for livestatus_dir")
             mkdir_p(livestatus_dir)
         fixpath(livestatus_dir)
 
+        hookenv.log("Reloading nagios3")
+        host.service_reload('nagios3')
+
         # Fix the perms on the socket
+        hookenv.log("Fixing perms on the socket")
         uid = pwd.getpwnam("nagios").pw_uid
         gid = grp.getgrnam("www-data").gr_gid
         os.chown(livestatus_path, uid, gid)
