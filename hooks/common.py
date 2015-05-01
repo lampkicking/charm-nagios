@@ -79,13 +79,13 @@ def refresh_hostgroups():
         try:
             hgroup = Model.Hostgroup.objects.get_by_shortname(hgroup_name)
             hgroup.delete()
-        except ValueError:
+        except (ValueError, KeyError):
             pass
 
     for hgroup_name, members in hgroups.iteritems():
         try:
             hgroup = Model.Hostgroup.objects.get_by_shortname(hgroup_name)
-        except ValueError:
+        except (ValueError, KeyError):
             hgroup = Model.Hostgroup()
             hgroup.set_filename(CHARM_CFG)
             hgroup.set_attribute('hostgroup_name', hgroup_name)
@@ -104,7 +104,7 @@ def _make_check_command(args):
     Model.Command.objects.reload_cache()
     try:
         cmd = Model.Command.objects.get_by_shortname(signature)
-    except ValueError:
+    except (ValueError, KeyError):
         cmd = Model.Command()
         cmd.set_attribute('command_name', signature)
         cmd.set_attribute('command_line', ' '.join(args))
@@ -152,6 +152,16 @@ def customize_mysql(service, name, extra):
     return True
 
 
+def customize_pgsql(service, name, extra):
+    plugin = os.path.join(PLUGIN_PATH, 'check_pgsql')
+    args = []
+    cmd_args = [plugin, '-H', '$HOSTADDRESS$']
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
+
 def customize_nrpe(service, name, extra):
     plugin = os.path.join(PLUGIN_PATH, 'check_nrpe')
     args = []
@@ -167,24 +177,90 @@ def customize_nrpe(service, name, extra):
     service.set_attribute('check_command', cmd)
     return True
 
+def customize_rpc(service, name, extra):
+    """ Customize the check_rpc plugin to check things like nfs."""
+    plugin = os.path.join(PLUGIN_PATH, 'check_rpc')
+    args = []
+    # /usr/lib/nagios/plugins/check_rpc -H <host> -C <rpc_command>
+    cmd_args = [plugin, '-H', '$HOSTADDRESS$']
+    if 'rpc_command' in extra:
+      cmd_args.extend(('-C', extra['rpc_command']))
+    if 'program_version' in extra:
+      cmd_args.extend(('-c', extra['program_version']))
+
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
+
+def customize_tcp(service, name, extra):
+    """ Customize tcp can be used to check things like memcached. """
+    plugin = os.path.join(PLUGIN_PATH, 'check_tcp')
+    args = []
+    # /usr/lib/nagios/plugins/check_tcp -H <host> -E
+    cmd_args = [plugin, '-H', '$HOSTADDRESS$', '-E']
+    if 'port' in extra:
+      cmd_args.extend(('-p', extra['port']))
+    if 'string' in extra:
+      cmd_args.extend(('-s', "'{}'".format(extra['string'])))
+    if 'expect' in extra:
+      cmd_args.extend(('-e', extra['expect']))
+    if 'warning' in extra:
+      cmd_args.extend(('-w', extra['warning']))
+    if 'critical' in extra:
+      cmd_args.extend(('-c', extra['critical']))
+    if 'timeout' in extra:
+      cmd_args.extend(('-t', extra['timeout']))
+
+    check_command = _make_check_command(cmd_args)
+    cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
+    service.set_attribute('check_command', cmd)
+    return True
+
 
 def customize_service(service, family, name, extra):
+    """ The monitors.yaml names are mapped to methods that customize services. """
     customs = {'http': customize_http,
-                'mysql': customize_mysql,
-                'nrpe': customize_nrpe}
+               'mysql': customize_mysql,
+               'nrpe': customize_nrpe,
+               'tcp': customize_tcp,
+               'rpc': customize_rpc,
+               'pgsql': customize_pgsql,
+              }
     if family in customs:
         return customs[family](service, name, extra)
     return False
 
 
+def update_localhost():
+    """ Update the localhost definition to use the ubuntu icons."""
+
+    Model.cfg_file = MAIN_NAGIOS_CFG
+    Model.pynag_directory = os.path.join(MAIN_NAGIOS_DIR, 'conf.d')
+    hosts = Model.Host.objects.filter(host_name='localhost',
+                                      object_type='host')
+    for host in hosts:
+        host.icon_image='base/ubuntu.png'
+        host.icon_image_alt='Ubuntu Linux'
+        host.vrml_image='ubuntu.png'
+        host.statusmap_image='base/ubuntu.gd2'
+        host.save()
+
+
 def get_pynag_host(target_id, owner_unit=None, owner_relation=None):
     try:
         host = Model.Host.objects.get_by_shortname(target_id)
-    except ValueError:
+    except (ValueError, KeyError):
         host = Model.Host()
         host.set_filename(CHARM_CFG)
         host.set_attribute('host_name', target_id)
         host.set_attribute('use', 'generic-host')
+        # Adding the ubuntu icon image definitions to the host.
+        host.set_attribute('icon_image', 'base/ubuntu.png')
+        host.set_attribute('icon_image_alt', 'Ubuntu Linux')
+        host.set_attribute('vrml_image', 'ubuntu.png')
+        host.set_attribute('statusmap_image', 'base/ubuntu.gd2')
         host.save()
         host = Model.Host.objects.get_by_shortname(target_id)
     apply_host_policy(target_id, owner_unit, owner_relation)
