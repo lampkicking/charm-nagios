@@ -48,6 +48,7 @@ if [ "$enable_livestatus" ]; then
     mkdir -p $livestatus_dir
     chown nagios:www-data $livestatus_dir
     chmod g+w $livestatus_dir
+    chmod g+s $livestatus_dir
 fi
 
 # || :'s are for idempotency

@@ -101,16 +101,15 @@ def enable_livestatus_config():
             mkdir_p(livestatus_dir)
         fixpath(livestatus_dir)
 
-        hookenv.log("Reloading nagios3")
-        host.service_reload('nagios3')
-
         # Fix the perms on the socket
         hookenv.log("Fixing perms on the socket")
         uid = pwd.getpwnam("nagios").pw_uid
         gid = grp.getgrnam("www-data").gr_gid
         os.chown(livestatus_path, uid, gid)
+        os.chown(livestatus_dir, uid, gid)
         st = os.stat(livestatus_path)
         os.chmod(livestatus_path, st.st_mode | stat.S_IRGRP)
+        os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP | stat.S_ISGID)
 
 
 def ssl_configured():
