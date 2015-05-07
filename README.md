@@ -28,6 +28,10 @@ Will get you the public IP of the web interface.
 
 # Configuration
 
+- `enable_livestatus` - Setting to enable the [livestatus module](https://mathias-kettner.de/checkmk_livestatus.html). This is an easy interface to get data out of Nagios.
+
+- `livestatus_path` - Configuration of where the livestatus module is stored - defaults to /var/lib/nagios3/livestatus/socket.
+
 ### SSL Configuration
 
 - `ssl` - Determinant configuration for enabling SSL. Valid options are "on", "off", "only". The "only" option disables HTTP traffic on Apache in favor of HTTPS. This setting may cause unexpected behavior with existing nagios charm deployments. 

@@ -53,7 +53,7 @@ def write_extra_config():
         host.write_file('/etc/nagios3/conf.d/extra.cfg', extra_config)
 
 
-# Equivalent of mkdir -p, since we can't rely on 
+# Equivalent of mkdir -p, since we can't rely on
 # python 3.2 os.makedirs exist_ok argument
 def mkdir_p(path):
     try:
