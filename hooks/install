@@ -37,6 +37,24 @@ if [ -f $CHARM_DIR/files/hostgroups_nagios2.cfg ]; then
     rm -v /etc/nagios3/conf.d/extinfo_nagios2.cfg
 fi
 
+enable_livestatus=$(config-get enable_livestatus)
+livestatus_path=$(config-get livestatus_path)
+livestatus_dir=$(dirname $livestatus_path)
+
+if [ "$enable_livestatus" ]; then 
+    # install check-mk-livestatus
+    DEBIAN_FRONTEND=noninteractive apt-get -qy install check-mk-livestatus
+    # enable livestatus broker
+    if ! grep '^broker_module=' /etc/nagios3/nagios.cfg ; then
+        echo "broker_module=/usr/lib/check_mk/livestatus.o $livestatus_path" >> /etc/nagios3/nagios.cfg
+    fi
+    # fix permissions on the livestatus directory
+    mkdir -p $livestatus_dir
+    chown nagios:www-data $livestatus_dir
+    chmod g+w $livestatus_dir
+    chmod g+s $livestatus_dir
+fi
+
 if [ -f $CHARM_DIR/files/index.html ]; then
     # Replace the default index.html file to redirect to nagios3/
     cp -v $CHARM_DIR/files/index.html /var/www/html/index.html
