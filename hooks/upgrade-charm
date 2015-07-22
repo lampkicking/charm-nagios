@@ -154,6 +154,8 @@ def enable_pagerduty_config():
     with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
         f.write(t.render(template_values))
 
+    host.service_reload('nagios3')
+
 
 def ssl_configured():
     allowed_options = ["on", "only"]
@@ -240,6 +242,7 @@ def update_config():
     with open(nagios_cfg, 'w') as f:
         f.write(t.render(template_values))
 
+    host.service_reload('nagios3')
 
 # Nagios3 is deployed as a global apache application from the archive.
 # We'll get a little funky and add the SSL keys to the default-ssl config
