@@ -228,7 +228,10 @@ def update_config():
                        'debug_level': hookenv.config('debug_level'),
                        'daemon_dumps_core': hookenv.config('daemon_dumps_core'),
                        'admin_email': hookenv.config('admin_email'),
-                       'admin_pager': hookenv.config('admin_pager')}
+                       'admin_pager': hookenv.config('admin_pager'),
+                       'log_rotation_method': hookenv.config('log_rotation_method'),
+                       'log_archive_path': hookenv.config('log_archive_path'),
+                       'use_syslog': hookenv.config('use_syslog')}
 
     with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
         templateDef = f.read()

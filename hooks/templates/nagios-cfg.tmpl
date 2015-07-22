@@ -266,7 +266,7 @@ broker_module=/usr/lib/check_mk/livestatus.o {{ livestatus_path }} {{ livestatus
 #	w	= Weekly rotation (midnight on Saturday evening)
 #	m	= Monthly rotation (midnight last day of month)
 
-log_rotation_method=d
+log_rotation_method={{ log_rotation_method }}
 
 
 
@@ -274,7 +274,7 @@ log_rotation_method=d
 # This is the directory where archived (rotated) log files should be 
 # placed (assuming you've chosen to do log rotation).
 
-log_archive_path=/var/log/nagios3/archives
+log_archive_path={{ log_archive_path }}
 
 
 
@@ -282,7 +282,7 @@ log_archive_path=/var/log/nagios3/archives
 # If you want messages logged to the syslog facility, as well as the
 # Nagios log file set this option to 1.  If not, set it to 0.
 
-use_syslog=1
+use_syslog={{ use_syslog }}
 
 
 

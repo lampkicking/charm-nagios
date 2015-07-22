@@ -122,3 +122,18 @@ options:
         default: "/var/lib/nagios3/pagerduty"
         description: |
             Path for Pagerduty notifications to be queued.
+    log_rotation_method:
+        type: string
+        default: "d"
+        description: |
+            Log rotation method that Nagios should use to rotate the main logfile.
+    log_archive_path:
+        type: string
+        default: "/var/log/nagios3/archives"
+        description: |
+            Path for archived log files
+    use_syslog:
+        type: int
+        default: 1
+        description: |
+            Log messages to syslog as well as main file.

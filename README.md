@@ -66,6 +66,11 @@ Will get you the public IP of the web interface.
 
 - `admin_pager` - Email address used for the admin pager, used by $ADMINPAGER$ in notification commands - defaults to pageroot@localhost.
 
+- `log_rotation_method` - Log rotation method that Nagios should use to rotate the main logfile, defaults to "d".
+
+- `log_archive_path` - Path for archived log files, defaults to /var/log/nagios3/archives
+- `use_syslog` - Log messages to syslog as well as main file.
+
 ### SSL Configuration
 
 - `ssl` - Determinant configuration for enabling SSL. Valid options are "on", "off", "only". The "only" option disables HTTP traffic on Apache in favor of HTTPS. This setting may cause unexpected behavior with existing nagios charm deployments. 
