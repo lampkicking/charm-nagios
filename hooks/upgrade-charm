@@ -177,6 +177,7 @@ def update_config():
                        'nagios_group': hookenv.config('nagios_group'),
                        'enable_livestatus': hookenv.config('enable_livestatus'),
                        'livestatus_path': hookenv.config('livestatus_path'),
+                       'livestatus_args': hookenv.config('livestatus_args'),
                        'check_external_commands': hookenv.config('check_external_commands'),
                        'command_check_interval': hookenv.config('command_check_interval'),
                        'command_file': hookenv.config('command_file'),
