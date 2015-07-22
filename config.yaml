@@ -61,7 +61,7 @@ options:
             Config variable to enable checking external commands - 0 is disable, 1 is enable.
     command_check_interval:
         type: string
-        default: -1
+        default: "-1"
         description: |
             How often to check for external commands.
     command_file:
