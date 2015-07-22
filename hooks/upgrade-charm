@@ -5,7 +5,7 @@
 import base64
 from jinja2 import Template
 import os
-import re
+# import re
 import pwd
 import grp
 import stat
@@ -79,19 +79,19 @@ def enable_livestatus_config():
         hookenv.log("Livestatus is enabled")
         fetch.apt_update()
         fetch.apt_install('check-mk-livestatus')
-        broker = re.compile("^broker_module=")
-        broker_found = False
-        for line in open(nagios_cfg):
-            if broker.match(line):
-                broker_found = True
-                hookenv.log("broker_module line exists, not adding..")
-                break
-
-        if not broker_found:
-            with open(nagios_cfg, "a") as nagiosfile:
-                broker_str = "broker_module=/usr/lib/check_mk/livestatus.o " . livestatus_path
-                nagiosfile.write(broker_str)
-            nagiosfile.close()
+#        broker = re.compile("^broker_module=")
+#        broker_found = False
+#        for line in open(nagios_cfg):
+#            if broker.match(line):
+#                broker_found = True
+#                hookenv.log("broker_module line exists, not adding..")
+#                break
+#
+#        if not broker_found:
+#            with open(nagios_cfg, "a") as nagiosfile:
+#                broker_str = "broker_module=/usr/lib/check_mk/livestatus.o " . livestatus_path
+#                nagiosfile.write(broker_str)
+#            nagiosfile.close()
 
         # Make the directory and fix perms on it
         hookenv.log("Fixing perms on livestatus_path")
@@ -171,6 +171,7 @@ def enable_ssl():
         decode_ssl_keys()
         hookenv.log("Decoded SSL files", "INFO")
 
+
 def update_config():
     template_values = {'nagios_user': hookenv.config('nagios_user'),
                        'nagios_group': hookenv.config('nagios_group'),
@@ -187,7 +188,7 @@ def update_config():
     with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
         templateDef = f.read()
 
-    t = Template(demplateDef)
+    t = Template(templateDef)
     with open('/etc/nagios3/nagios.cfg', 'w') as f:
         f.write(t.render(template_values))
 
@@ -232,6 +233,7 @@ def update_apache():
 
 warn_legacy_relations()
 write_extra_config()
+update_config()
 enable_livestatus_config()
 if ssl_configured():
     enable_ssl()
