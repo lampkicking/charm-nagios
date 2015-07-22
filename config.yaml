@@ -107,3 +107,18 @@ options:
         description: |
             Email address used for the admin pager, used by $ADMINPAGER$ in 
             notification commands.
+    enable_pagerduty:
+        type: boolean
+        default: false
+        description: |
+            Config variable to enable pagerduty notifications or not.
+    pagerduty_key:
+        type: string
+        default: ""
+        description: |
+            Pagerduty API key to use for notifications
+    pagerduty_path:
+        type: string
+        default: "/var/lib/nagios3/pagerduty"
+        description: |
+            Path for Pagerduty notifications to be queued.

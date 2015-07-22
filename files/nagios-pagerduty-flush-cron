@@ -1,0 +1,7 @@
+#------------------------------------------------
+# This file is juju managed
+#------------------------------------------------
+
+# Flush the nagios pagerduty alerts every minute as per
+# http://www.pagerduty.com/docs/guides/nagios-perl-integration-guide/
+* * * * *   nagios  /usr/local/bin/pagerduty_nagios.pl flush

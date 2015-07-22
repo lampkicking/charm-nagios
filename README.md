@@ -26,13 +26,23 @@ You can expose the service and browse to `http://x.x.x.x/nagios3` to get to the 
 
 Will get you the public IP of the web interface.
 
-# Configuration
+# Livestatus Configuration
 
 - `enable_livestatus` - Setting to enable the [livestatus module](https://mathias-kettner.de/checkmk_livestatus.html). This is an easy interface to get data out of Nagios.
 
 - `livestatus_path` - Configuration of where the livestatus module is stored - defaults to /var/lib/nagios3/livestatus/socket.
 
 - `livestatus_args` - Arguments to be passed to the livestatus module, defaults to empty.
+
+# Pagerduty Configuration
+
+- `enable_pagerduty` - Config variable to enable pagerduty notifications or not.
+
+- `pagerduty_key` - Pagerduty API key to use for notifications
+
+- `pagerduty_path` - Path for Pagerduty notifications to be queued, default is /var/lib/nagios3/pagerduty.
+
+# Configuration
 
 - `nagios_user` - The effective user that nagios will run as.
 

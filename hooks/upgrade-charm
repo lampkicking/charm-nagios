@@ -10,7 +10,7 @@ import pwd
 import grp
 import stat
 import errno
-# import shutil
+import shutil
 import subprocess
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
@@ -23,6 +23,11 @@ legacy_relations = hookenv.config('legacy')
 extra_config = hookenv.config('extraconfig')
 enable_livestatus = hookenv.config('enable_livestatus')
 livestatus_path = hookenv.config('livestatus_path')
+enable_pagerduty = hookenv.config('enable_pagerduty')
+pagerduty_key = hookenv.config('pagerduty_key')
+pagerduty_path = hookenv.config('pagerduty_path')
+nagios_user = hookenv.config('nagios_user')
+nagios_group = hookenv.config('nagios_group')
 ssl_config = hookenv.config('ssl')
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
@@ -95,7 +100,6 @@ def enable_livestatus_config():
 
         # Make the directory and fix perms on it
         hookenv.log("Fixing perms on livestatus_path")
-        livestatus_path = hookenv.config('livestatus_path')
         livestatus_dir = os.path.dirname(livestatus_path)
         if not os.path.isdir(livestatus_dir):
             hookenv.log("Making path for livestatus_dir")
@@ -104,13 +108,56 @@ def enable_livestatus_config():
 
         # Fix the perms on the socket
         hookenv.log("Fixing perms on the socket")
-        uid = pwd.getpwnam("nagios").pw_uid
+        uid = pwd.getpwnam(nagios_user).pw_uid
         gid = grp.getgrnam("www-data").gr_gid
         os.chown(livestatus_path, uid, gid)
         os.chown(livestatus_dir, uid, gid)
         st = os.stat(livestatus_path)
         os.chmod(livestatus_path, st.st_mode | stat.S_IRGRP)
         os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP | stat.S_ISGID)
+
+
+def enable_pagerduty_config():
+    if enable_pagerduty:
+        hookenv.log("Pagerduty is enabled")
+
+        # Ship the pagerduty_nagios.cfg file
+        template_values = {'enable_pagerduty': enable_pagerduty,
+                           'pagerduty_key': pagerduty_key,
+                           'pagerduty_path': pagerduty_path}
+
+        with open('hooks/templates/pagerduty_nagios_cfg.tmpl', 'r') as f:
+            templateDef = f.read()
+
+        t = Template(templateDef)
+        with open('/etc/nagios3/conf.d/pagerduty_nagios.cfg', 'w') as f:
+            f.write(t.render(template_values))
+
+        # Ship the cron file
+        shutil.copyfile('files/nagios-pagerduty-flush-cron', '/etc/cron.d/nagios-pagerduty-flush')
+
+        # Ship the pagerduty_nagios.pl script
+        shutil.copyfile('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
+
+        # Update contacts for admin to include pagerduty
+        template_values = {'enable_pagerduty': enable_pagerduty,
+                           'admin_email': hookenv.config('admin_email')}
+
+        with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
+            templateDef = f.read()
+
+        t = Template(templateDef)
+        with open('/etc/nagios3/conf.d/contacts-nagios2.cfg', 'w') as f:
+            f.write(t.render(template_values))
+
+        # Create the pagerduty queue dir
+        if not os.path.isdir(pagerduty_path):
+            hookenv.log("Making path for pagerduty_path")
+            mkdir_p(pagerduty_path)
+        # Fix the perms on it
+        uid = pwd.getpwnam(nagios_user).pw_uid
+        gid = grp.getgrnam(nagios_group).gr_gid
+        os.chown(pagerduty_path, uid, gid)
 
 
 def ssl_configured():
@@ -173,10 +220,10 @@ def enable_ssl():
 
 
 def update_config():
-    template_values = {'nagios_user': hookenv.config('nagios_user'),
-                       'nagios_group': hookenv.config('nagios_group'),
-                       'enable_livestatus': hookenv.config('enable_livestatus'),
-                       'livestatus_path': hookenv.config('livestatus_path'),
+    template_values = {'nagios_user': nagios_user,
+                       'nagios_group': nagios_group,
+                       'enable_livestatus': enable_livestatus,
+                       'livestatus_path': livestatus_path,
                        'livestatus_args': hookenv.config('livestatus_args'),
                        'check_external_commands': hookenv.config('check_external_commands'),
                        'command_check_interval': hookenv.config('command_check_interval'),
@@ -192,7 +239,7 @@ def update_config():
         templateDef = f.read()
 
     t = Template(templateDef)
-    with open('/etc/nagios3/nagios.cfg', 'w') as f:
+    with open(nagios_cfg, 'w') as f:
         f.write(t.render(template_values))
 
 
@@ -238,6 +285,7 @@ warn_legacy_relations()
 write_extra_config()
 update_config()
 enable_livestatus_config()
+enable_pagerduty_config()
 if ssl_configured():
     enable_ssl()
 update_apache()
