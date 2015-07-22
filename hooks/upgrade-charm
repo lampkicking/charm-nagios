@@ -147,7 +147,7 @@ def enable_pagerduty_config():
             templateDef = f.read()
 
         t = Template(templateDef)
-        with open('/etc/nagios3/conf.d/contacts-nagios2.cfg', 'w') as f:
+        with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
             f.write(t.render(template_values))
 
         # Create the pagerduty queue dir
