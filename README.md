@@ -32,6 +32,8 @@ Will get you the public IP of the web interface.
 
 - `livestatus_path` - Configuration of where the livestatus module is stored - defaults to /var/lib/nagios3/livestatus/socket.
 
+- `livestatus_args` - Arguments to be passed to the livestatus module, defaults to empty.
+
 - `nagios_user` - The effective user that nagios will run as.
 
 - `nagios_group` - The effective group that nagios will run as.

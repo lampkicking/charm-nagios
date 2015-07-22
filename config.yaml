@@ -44,6 +44,11 @@ options:
         default: "/var/lib/nagios3/livestatus/socket"
         description: |
             Default path to livestatus socket, if enabled via enable_livestatus
+    livestatus_args:
+        type: string
+        default: ""
+        description: |
+            Arguments to be passed to the livestatus module, defaults to empty.
     nagios_user:
         type: string
         default: nagios
