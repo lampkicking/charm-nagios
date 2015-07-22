@@ -248,10 +248,9 @@ event_broker_options=-1
 
 #broker_module=/somewhere/module1.o
 #broker_module=/somewhere/module2.o arg1 arg2=3 debug=0
-{% if enabled_livestatus -%}
+{% if enable_livestatus -%}
 broker_module=/usr/lib/check_mk/livestatus.o {{ livestatus_path }}
-{% endif -%}
-
+{% endif %}
 
 
 # LOG ROTATION METHOD
