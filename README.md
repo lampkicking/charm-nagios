@@ -32,6 +32,28 @@ Will get you the public IP of the web interface.
 
 - `livestatus_path` - Configuration of where the livestatus module is stored - defaults to /var/lib/nagios3/livestatus/socket.
 
+- `nagios_user` - The effective user that nagios will run as.
+
+- `nagios_group` - The effective group that nagios will run as.
+
+- `check_external_commands` - Config variable to enable checking external commands.
+
+- `command_check_interval` - How often to check for external commands.
+
+- `command_file` - File that Nagios checks for external command requests.
+
+- `debug_level` - Specify the debug level for nagios.  See the docs for more details.
+
+- `debug_verbosity` - How verbose will the debug logs be - 0 is brief, 1 is more detailed and 2 is very detailed.
+
+- `debug_file` - Path for the debug file - defaults to /var/log/nagios3/nagios.debug.
+
+- `daemon_dumps_core` - Option to determine if Nagios is allowed to create a core dump.
+
+- `admin_email` - Email address used for the admin, used by $ADMINEMAIL$ in notification commands - defaults to root@localhost.
+
+- `admin_pager` - Email address used for the admin pager, used by $ADMINPAGER$ in notification commands - defaults to pageroot@localhost.
+
 ### SSL Configuration
 
 - `ssl` - Determinant configuration for enabling SSL. Valid options are "on", "off", "only". The "only" option disables HTTP traffic on Apache in favor of HTTPS. This setting may cause unexpected behavior with existing nagios charm deployments. 

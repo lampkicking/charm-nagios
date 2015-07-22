@@ -171,6 +171,26 @@ def enable_ssl():
         decode_ssl_keys()
         hookenv.log("Decoded SSL files", "INFO")
 
+def update_config():
+    template_values = {'nagios_user': hookenv.config('nagios_user'),
+                       'nagios_group': hookenv.config('nagios_group'),
+                       'check_external_commands': hookenv.config('check_external_commands'),
+                       'command_check_interval': hookenv.config('command_check_interval'),
+                       'command_file': hookenv.config('command_file'),
+                       'debug_file': hookenv.config('debug_file'),
+                       'debug_verbosity': hookenv.config('debug_verbosity'),
+                       'debug_file': hookenv.config('debug_file'),
+                       'daemon_dumps_core': hookenv.config('daemon_dumps_core'),
+                       'admin_email': hookenv.config('admin_email'),
+                       'admin_pager': hookenv.config('admin_pager')}
+
+    with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
+        templateDef = f.read()
+
+    t = Template(demplateDef)
+    with open('/etc/nagios3/nagios.cfg', 'w') as f:
+        f.write(t.render(template_values))
+
 
 # Nagios3 is deployed as a global apache application from the archive.
 # We'll get a little funky and add the SSL keys to the default-ssl config

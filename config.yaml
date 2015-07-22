@@ -44,3 +44,61 @@ options:
         default: "/var/lib/nagios3/livestatus/socket"
         description: |
             Default path to livestatus socket, if enabled via enable_livestatus
+    nagios_user:
+        type: string
+        default: nagios
+        description: |
+            The effective user that nagios will run as.
+    nagios_group:
+        type: string
+        default: nagios
+        description: |
+            The effective group that nagios will run as.
+    check_external_commands:
+        type: int
+        default: 1
+        description: |
+            Config variable to enable checking external commands - 0 is disable, 1 is enable.
+    command_check_interval:
+        type: string
+        default: -1
+        description: |
+            How often to check for external commands.
+    command_file:
+        type: string
+        default: /var/lib/nagios3/rw/nagios.cmd
+        description: |
+            File that Nagios checks for external command requests.
+    debug_level:
+        type: int
+        default: 0
+        description: |
+            Specify the debug level for nagios.  See the docs for more details.
+    debug_verbosity:
+        type: int
+        default: 1
+        description: |
+            How verbose will the debug logs be - 0 is brief, 1 is more detailed
+            and 2 is very detailed.
+    debug_file:
+        type: string
+        default: "/var/log/nagios3/nagios.debug"
+        description: |
+            Path for the debug file.
+    daemon_dumps_core:
+        type: int
+        default: 0
+        description:
+            Option to determine if Nagios is allowed to create a core dump.
+    admin_email:
+        type: string
+        default: root@localhost
+        description: |
+            Email address used for the admin, used by $ADMINEMAIL$ in notification
+            commands.
+    admin_pager:
+        type: string
+        default: pageroot@localhost
+        description: |
+            Email address used for the admin pager, used by $ADMINPAGER$ in 
+            notification commands.
