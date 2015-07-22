@@ -35,6 +35,7 @@ nagios_cfg = "/etc/nagios3/nagios.cfg"
 pagerduty_cfg = "/etc/nagios3/conf.d/pagerduty_nagios.cfg"
 pagerduty_cron = "/etc/cron.d/nagios-pagerduty-flush"
 
+
 # Checks the charm relations for legacy relations
 # Inserts warnings into the log about legacy relations, as they will be removed
 # in the future
@@ -140,17 +141,6 @@ def enable_pagerduty_config():
         # Ship the pagerduty_nagios.pl script
         shutil.copyfile('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
 
-        # Update contacts for admin to include pagerduty
-        template_values = {'enable_pagerduty': enable_pagerduty,
-                           'admin_email': hookenv.config('admin_email')}
-
-        with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
-            templateDef = f.read()
-
-        t = Template(templateDef)
-        with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
-            f.write(t.render(template_values))
-
         # Create the pagerduty queue dir
         if not os.path.isdir(pagerduty_path):
             hookenv.log("Making path for pagerduty_path")
@@ -165,6 +155,17 @@ def enable_pagerduty_config():
             os.remove(pagerduty_cfg)
         if os.path.isfile(pagerduty_cron):
             os.remove(pagerduty_cron)
+
+    # Update contacts for admin
+    template_values = {'enable_pagerduty': enable_pagerduty,
+                       'admin_email': hookenv.config('admin_email')}
+
+    with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
+        templateDef = f.read()
+
+    t = Template(templateDef)
+    with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
+        f.write(t.render(template_values))
 
 
 def ssl_configured():
