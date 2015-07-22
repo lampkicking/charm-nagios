@@ -32,7 +32,8 @@ ssl_config = hookenv.config('ssl')
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
 nagios_cfg = "/etc/nagios3/nagios.cfg"
-
+pagerduty_cfg = "/etc/nagios3/conf.d/pagerduty_nagios.cfg"
+pagerduty_cron = "/etc/cron.d/nagios-pagerduty-flush"
 
 # Checks the charm relations for legacy relations
 # Inserts warnings into the log about legacy relations, as they will be removed
@@ -130,11 +131,11 @@ def enable_pagerduty_config():
             templateDef = f.read()
 
         t = Template(templateDef)
-        with open('/etc/nagios3/conf.d/pagerduty_nagios.cfg', 'w') as f:
+        with open(pagerduty_cfg, 'w') as f:
             f.write(t.render(template_values))
 
         # Ship the cron file
-        shutil.copyfile('files/nagios-pagerduty-flush-cron', '/etc/cron.d/nagios-pagerduty-flush')
+        shutil.copyfile('files/nagios-pagerduty-flush-cron', pagerduty_cron)
 
         # Ship the pagerduty_nagios.pl script
         shutil.copyfile('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
@@ -158,6 +159,12 @@ def enable_pagerduty_config():
         uid = pwd.getpwnam(nagios_user).pw_uid
         gid = grp.getgrnam(nagios_group).gr_gid
         os.chown(pagerduty_path, uid, gid)
+    else:
+        # Clean up the files if we don't want pagerduty
+        if os.path.isfile(pagerduty_cfg):
+            os.remove(pagerduty_cfg)
+        if os.path.isfile(pagerduty_cron):
+            os.remove(pagerduty_cron)
 
 
 def ssl_configured():
