@@ -175,12 +175,14 @@ def enable_ssl():
 def update_config():
     template_values = {'nagios_user': hookenv.config('nagios_user'),
                        'nagios_group': hookenv.config('nagios_group'),
+                       'enable_livestatus': hookenv.config('enable_livestatus'),
+                       'livestatus_path': hookenv.config('livestatus_path'),
                        'check_external_commands': hookenv.config('check_external_commands'),
                        'command_check_interval': hookenv.config('command_check_interval'),
                        'command_file': hookenv.config('command_file'),
                        'debug_file': hookenv.config('debug_file'),
                        'debug_verbosity': hookenv.config('debug_verbosity'),
-                       'debug_file': hookenv.config('debug_file'),
+                       'debug_level': hookenv.config('debug_level'),
                        'daemon_dumps_core': hookenv.config('daemon_dumps_core'),
                        'admin_email': hookenv.config('admin_email'),
                        'admin_pager': hookenv.config('admin_pager')}
