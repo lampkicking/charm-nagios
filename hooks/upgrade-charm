@@ -86,19 +86,6 @@ def enable_livestatus_config():
         hookenv.log("Livestatus is enabled")
         fetch.apt_update()
         fetch.apt_install('check-mk-livestatus')
-#        broker = re.compile("^broker_module=")
-#        broker_found = False
-#        for line in open(nagios_cfg):
-#            if broker.match(line):
-#                broker_found = True
-#                hookenv.log("broker_module line exists, not adding..")
-#                break
-#
-#        if not broker_found:
-#            with open(nagios_cfg, "a") as nagiosfile:
-#                broker_str = "broker_module=/usr/lib/check_mk/livestatus.o " . livestatus_path
-#                nagiosfile.write(broker_str)
-#            nagiosfile.close()
 
         # Make the directory and fix perms on it
         hookenv.log("Fixing perms on livestatus_path")
