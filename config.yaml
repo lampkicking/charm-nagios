@@ -44,3 +44,10 @@ options:
         default: "/var/lib/nagios3/livestatus/socket"
         description: |
             Default path to livestatus socket, if enabled via enable_livestatus
+    password:
+        type: string
+        default: ''
+        description: |
+            Password to use for Nagios administrative access.  If not
+            provided, a password will be generated (see documentation for
+            instructions on retrieving the generated password.)

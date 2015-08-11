@@ -6,13 +6,18 @@ set -uex
 # are being updated. To handle this case, just call it a few times.
 apt-get update || apt-get update || apt-get update
 
-apt-get -y install pwgen --force-yes
-
+# If a password file already exists, use the password therein.
 PASSWD_FILE="/var/lib/juju/nagios.passwd"
 if [[ -e $PASSWD_FILE ]] ; then
   PASSWORD=$(cat $PASSWD_FILE)
 else
-  PASSWORD=$(pwgen 10 1)
+  # If no password file exists, use the password provided in the charm config.
+  # If no password was provided, generate a random password.
+  PASSWORD=$(config-get password)
+  if [ -z "$PASSWORD" ]; then
+    apt-get -y install pwgen --force-yes
+    PASSWORD=$(pwgen 10 1)
+  fi
   echo $PASSWORD >$PASSWD_FILE
   chmod 0400 $PASSWD_FILE
 fi
@@ -41,7 +46,7 @@ enable_livestatus=$(config-get enable_livestatus)
 livestatus_path=$(config-get livestatus_path)
 livestatus_dir=$(dirname $livestatus_path)
 
-if [ "$enable_livestatus" ]; then 
+if [ "$enable_livestatus" ]; then
     # install check-mk-livestatus
     DEBIAN_FRONTEND=noninteractive apt-get -qy install check-mk-livestatus
     # enable livestatus broker
