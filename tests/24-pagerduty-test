@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from time import sleep
 import amulet
 # import requests
 
@@ -31,6 +32,8 @@ d.configure('nagios', {
 
 d.sentry.wait()
 
+# Give it a while to settle
+sleep(30)
 
 def test_pagerduty_path_exists():
     pagerduty_path = nagios_unit.run('config-get pagerduty_path')
