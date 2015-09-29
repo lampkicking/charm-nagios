@@ -27,6 +27,7 @@ ssl_config = hookenv.config('ssl')
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
 nagios_cfg = "/etc/nagios3/nagios.cfg"
+password = hookenv.config('password')
 
 
 # Checks the charm relations for legacy relations
@@ -209,6 +210,12 @@ def update_apache():
 
     host.service_reload('apache2')
 
+def update_password(password):
+    """Update the charm and Apache's record of the admin interface password."""
+    with open('/var/lib/juju/nagios.passwd', 'w') as f:
+        f.write(password)
+    subprocess.call(['htpasswd', '-b', '/etc/nagios3/htpasswd.users',
+        'nagiosadmin', password])
 
 warn_legacy_relations()
 write_extra_config()
@@ -217,6 +224,8 @@ if ssl_configured():
     enable_ssl()
 update_apache()
 update_localhost()
+if password:
+    update_password(password)
 
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])
