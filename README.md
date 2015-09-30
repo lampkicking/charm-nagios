@@ -32,6 +32,8 @@ Will get you the public IP of the web interface.
 
 - `livestatus_path` - Configuration of where the livestatus module is stored - defaults to /var/lib/nagios3/livestatus/socket.
 
+- `password` - Password to use for administrative access instead of a generated password.
+
 ### SSL Configuration
 
 - `ssl` - Determinant configuration for enabling SSL. Valid options are "on", "off", "only". The "only" option disables HTTP traffic on Apache in favor of HTTPS. This setting may cause unexpected behavior with existing nagios charm deployments. 
