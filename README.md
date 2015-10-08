@@ -26,11 +26,50 @@ You can expose the service and browse to `http://x.x.x.x/nagios3` to get to the 
 
 Will get you the public IP of the web interface.
 
-# Configuration
+# Livestatus Configuration
 
 - `enable_livestatus` - Setting to enable the [livestatus module](https://mathias-kettner.de/checkmk_livestatus.html). This is an easy interface to get data out of Nagios.
 
 - `livestatus_path` - Configuration of where the livestatus module is stored - defaults to /var/lib/nagios3/livestatus/socket.
+
+- `livestatus_args` - Arguments to be passed to the livestatus module, defaults to empty.
+
+# Pagerduty Configuration
+
+- `enable_pagerduty` - Config variable to enable pagerduty notifications or not.
+
+- `pagerduty_key` - Pagerduty API key to use for notifications
+
+- `pagerduty_path` - Path for Pagerduty notifications to be queued, default is /var/lib/nagios3/pagerduty.
+
+# Configuration
+
+- `nagios_user` - The effective user that nagios will run as.
+
+- `nagios_group` - The effective group that nagios will run as.
+
+- `check_external_commands` - Config variable to enable checking external commands.
+
+- `command_check_interval` - How often to check for external commands.
+
+- `command_file` - File that Nagios checks for external command requests.
+
+- `debug_level` - Specify the debug level for nagios.  See the docs for more details.
+
+- `debug_verbosity` - How verbose will the debug logs be - 0 is brief, 1 is more detailed and 2 is very detailed.
+
+- `debug_file` - Path for the debug file - defaults to /var/log/nagios3/nagios.debug.
+
+- `daemon_dumps_core` - Option to determine if Nagios is allowed to create a core dump.
+
+- `admin_email` - Email address used for the admin, used by $ADMINEMAIL$ in notification commands - defaults to root@localhost.
+
+- `admin_pager` - Email address used for the admin pager, used by $ADMINPAGER$ in notification commands - defaults to pageroot@localhost.
+
+- `log_rotation_method` - Log rotation method that Nagios should use to rotate the main logfile, defaults to "d".
+
+- `log_archive_path` - Path for archived log files, defaults to /var/log/nagios3/archives
+- `use_syslog` - Log messages to syslog as well as main file.
 
 - `password` - Password to use for administrative access instead of a generated password.
 

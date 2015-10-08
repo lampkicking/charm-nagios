@@ -5,12 +5,12 @@
 import base64
 from jinja2 import Template
 import os
-import re
+# import re
 import pwd
 import grp
 import stat
 import errno
-# import shutil
+import shutil
 import subprocess
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
@@ -23,10 +23,17 @@ legacy_relations = hookenv.config('legacy')
 extra_config = hookenv.config('extraconfig')
 enable_livestatus = hookenv.config('enable_livestatus')
 livestatus_path = hookenv.config('livestatus_path')
+enable_pagerduty = hookenv.config('enable_pagerduty')
+pagerduty_key = hookenv.config('pagerduty_key')
+pagerduty_path = hookenv.config('pagerduty_path')
+nagios_user = hookenv.config('nagios_user')
+nagios_group = hookenv.config('nagios_group')
 ssl_config = hookenv.config('ssl')
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
 nagios_cfg = "/etc/nagios3/nagios.cfg"
+pagerduty_cfg = "/etc/nagios3/conf.d/pagerduty_nagios.cfg"
+pagerduty_cron = "/etc/cron.d/nagios-pagerduty-flush"
 password = hookenv.config('password')
 
 
@@ -80,23 +87,9 @@ def enable_livestatus_config():
         hookenv.log("Livestatus is enabled")
         fetch.apt_update()
         fetch.apt_install('check-mk-livestatus')
-        broker = re.compile("^broker_module=")
-        broker_found = False
-        for line in open(nagios_cfg):
-            if broker.match(line):
-                broker_found = True
-                hookenv.log("broker_module line exists, not adding..")
-                break
-
-        if not broker_found:
-            with open(nagios_cfg, "a") as nagiosfile:
-                broker_str = "broker_module=/usr/lib/check_mk/livestatus.o " . livestatus_path
-                nagiosfile.write(broker_str)
-            nagiosfile.close()
 
         # Make the directory and fix perms on it
         hookenv.log("Fixing perms on livestatus_path")
-        livestatus_path = hookenv.config('livestatus_path')
         livestatus_dir = os.path.dirname(livestatus_path)
         if not os.path.isdir(livestatus_dir):
             hookenv.log("Making path for livestatus_dir")
@@ -105,13 +98,64 @@ def enable_livestatus_config():
 
         # Fix the perms on the socket
         hookenv.log("Fixing perms on the socket")
-        uid = pwd.getpwnam("nagios").pw_uid
+        uid = pwd.getpwnam(nagios_user).pw_uid
         gid = grp.getgrnam("www-data").gr_gid
         os.chown(livestatus_path, uid, gid)
         os.chown(livestatus_dir, uid, gid)
         st = os.stat(livestatus_path)
         os.chmod(livestatus_path, st.st_mode | stat.S_IRGRP)
         os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP | stat.S_ISGID)
+
+
+def enable_pagerduty_config():
+    if enable_pagerduty:
+        hookenv.log("Pagerduty is enabled")
+
+        # Ship the pagerduty_nagios.cfg file
+        template_values = {'enable_pagerduty': enable_pagerduty,
+                           'pagerduty_key': pagerduty_key,
+                           'pagerduty_path': pagerduty_path}
+
+        with open('hooks/templates/pagerduty_nagios_cfg.tmpl', 'r') as f:
+            templateDef = f.read()
+
+        t = Template(templateDef)
+        with open(pagerduty_cfg, 'w') as f:
+            f.write(t.render(template_values))
+
+        # Ship the cron file
+        shutil.copyfile('files/nagios-pagerduty-flush-cron', pagerduty_cron)
+
+        # Ship the pagerduty_nagios.pl script
+        shutil.copyfile('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
+
+        # Create the pagerduty queue dir
+        if not os.path.isdir(pagerduty_path):
+            hookenv.log("Making path for pagerduty_path")
+            mkdir_p(pagerduty_path)
+        # Fix the perms on it
+        uid = pwd.getpwnam(nagios_user).pw_uid
+        gid = grp.getgrnam(nagios_group).gr_gid
+        os.chown(pagerduty_path, uid, gid)
+    else:
+        # Clean up the files if we don't want pagerduty
+        if os.path.isfile(pagerduty_cfg):
+            os.remove(pagerduty_cfg)
+        if os.path.isfile(pagerduty_cron):
+            os.remove(pagerduty_cron)
+
+    # Update contacts for admin
+    template_values = {'enable_pagerduty': enable_pagerduty,
+                       'admin_email': hookenv.config('admin_email')}
+
+    with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
+        templateDef = f.read()
+
+    t = Template(templateDef)
+    with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
+        f.write(t.render(template_values))
+
+    host.service_reload('nagios3')
 
 
 def ssl_configured():
@@ -173,6 +217,34 @@ def enable_ssl():
         hookenv.log("Decoded SSL files", "INFO")
 
 
+def update_config():
+    template_values = {'nagios_user': nagios_user,
+                       'nagios_group': nagios_group,
+                       'enable_livestatus': enable_livestatus,
+                       'livestatus_path': livestatus_path,
+                       'livestatus_args': hookenv.config('livestatus_args'),
+                       'check_external_commands': hookenv.config('check_external_commands'),
+                       'command_check_interval': hookenv.config('command_check_interval'),
+                       'command_file': hookenv.config('command_file'),
+                       'debug_file': hookenv.config('debug_file'),
+                       'debug_verbosity': hookenv.config('debug_verbosity'),
+                       'debug_level': hookenv.config('debug_level'),
+                       'daemon_dumps_core': hookenv.config('daemon_dumps_core'),
+                       'admin_email': hookenv.config('admin_email'),
+                       'admin_pager': hookenv.config('admin_pager'),
+                       'log_rotation_method': hookenv.config('log_rotation_method'),
+                       'log_archive_path': hookenv.config('log_archive_path'),
+                       'use_syslog': hookenv.config('use_syslog')}
+
+    with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
+        templateDef = f.read()
+
+    t = Template(templateDef)
+    with open(nagios_cfg, 'w') as f:
+        f.write(t.render(template_values))
+
+    host.service_reload('nagios3')
+
 # Nagios3 is deployed as a global apache application from the archive.
 # We'll get a little funky and add the SSL keys to the default-ssl config
 # which sets our keys, including the self-signed ones, as the host keyfiles.
@@ -219,7 +291,9 @@ def update_password(password):
 
 warn_legacy_relations()
 write_extra_config()
+update_config()
 enable_livestatus_config()
+enable_pagerduty_config()
 if ssl_configured():
     enable_ssl()
 update_apache()

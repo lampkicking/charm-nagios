@@ -44,6 +44,99 @@ options:
         default: "/var/lib/nagios3/livestatus/socket"
         description: |
             Default path to livestatus socket, if enabled via enable_livestatus
+    livestatus_args:
+        type: string
+        default: ""
+        description: |
+            Arguments to be passed to the livestatus module, defaults to empty.
+    nagios_user:
+        type: string
+        default: nagios
+        description: |
+            The effective user that nagios will run as.
+    nagios_group:
+        type: string
+        default: nagios
+        description: |
+            The effective group that nagios will run as.
+    check_external_commands:
+        type: int
+        default: 1
+        description: |
+            Config variable to enable checking external commands - 0 is disable, 1 is enable.
+    command_check_interval:
+        type: string
+        default: "-1"
+        description: |
+            How often to check for external commands.
+    command_file:
+        type: string
+        default: /var/lib/nagios3/rw/nagios.cmd
+        description: |
+            File that Nagios checks for external command requests.
+    debug_level:
+        type: int
+        default: 0
+        description: |
+            Specify the debug level for nagios.  See the docs for more details.
+    debug_verbosity:
+        type: int
+        default: 1
+        description: |
+            How verbose will the debug logs be - 0 is brief, 1 is more detailed
+            and 2 is very detailed.
+    debug_file:
+        type: string
+        default: "/var/log/nagios3/nagios.debug"
+        description: |
+            Path for the debug file.
+    daemon_dumps_core:
+        type: int
+        default: 0
+        description:
+            Option to determine if Nagios is allowed to create a core dump.
+    admin_email:
+        type: string
+        default: root@localhost
+        description: |
+            Email address used for the admin, used by $ADMINEMAIL$ in notification
+            commands.
+    admin_pager:
+        type: string
+        default: pageroot@localhost
+        description: |
+            Email address used for the admin pager, used by $ADMINPAGER$ in 
+            notification commands.
+    enable_pagerduty:
+        type: boolean
+        default: false
+        description: |
+            Config variable to enable pagerduty notifications or not.
+    pagerduty_key:
+        type: string
+        default: ""
+        description: |
+            Pagerduty API key to use for notifications
+    pagerduty_path:
+        type: string
+        default: "/var/lib/nagios3/pagerduty"
+        description: |
+            Path for Pagerduty notifications to be queued.
+    log_rotation_method:
+        type: string
+        default: "d"
+        description: |
+            Log rotation method that Nagios should use to rotate the main logfile.
+    log_archive_path:
+        type: string
+        default: "/var/log/nagios3/archives"
+        description: |
+            Path for archived log files
+    use_syslog:
+        type: int
+        default: 1
+        description: |
+            Log messages to syslog as well as main file.
     password:
         type: string
         default: ''
