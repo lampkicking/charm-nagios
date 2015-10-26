@@ -37,12 +37,12 @@ nagios_unit = d.sentry.unit['nagios/0']
 
 
 def test_nrpe_monitors_config():
-    # look for procrunning in nrpe config
+    # look for disk root check in nrpe config
     try:
-        mysql_unit.file_contents('/etc/nagios/nrpe.d/procrunning_mysqld.cfg')
+        mysql_unit.file_contents('/etc/nagios/nrpe.d/check_disk_root_sub.cfg')
     except IOError as e:
-        amulet.raise_status(amulet.ERROR,
-                            msg="procrunning config not found. Error:" +
+        amulet.raise_status(amulet.FAIL,
+                            msg="disk root check config not found. Error:" +
                             e.args[1])
 
 
@@ -54,7 +54,7 @@ def test_nagios_monitors_response():
     r = requests.get(host_url % nagios_unit.info['public-address'],
                      auth=('nagiosadmin', nagpwd))
     if not r.text.find('mysql-0-basic'):
-        amulet.raise_status(amulet.ERROR,
+        amulet.raise_status(amulet.FAIL,
                             msg='Nagios is not monitoring the' +
                             ' hosts it supposed to.')
 
