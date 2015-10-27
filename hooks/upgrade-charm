@@ -123,8 +123,12 @@ def enable_pagerduty_config():
         with open(pagerduty_cfg, 'w') as f:
             f.write(t.render(template_values))
 
-        # Ship the cron file
-        shutil.copyfile('files/nagios-pagerduty-flush-cron', pagerduty_cron)
+        with open('hooks/templates/nagios-pagerduty-flush-cron.tmpl', 'r') as f2:
+            templateDef = f2.read()
+
+        t2 = Template(templateDef)
+        with open(pagerduty_cron, 'w') as f2:
+            f2.write(t2.render(template_values))
 
         # Ship the pagerduty_nagios.pl script
         shutil.copyfile('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
