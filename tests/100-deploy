@@ -69,8 +69,8 @@ def test_mysql_monitoring_connection():
 # some love otherwise.
 def test_nrpe_monitor():
     #On join the NRPE unit generates an allowed hosts config
-    ahosts = haproxy_unit.file_stat('/etc/nagios/nrpe.d/allowed.hosts.cfg')
-    if not ahosts:
+    nagcfg = haproxy_unit.file_stat('/etc/nagios/nrpe.d/check_disk_root_sub.cfg')
+    if not nagcfg:
         amulet.raise_status(amulet.FAIL, msg="Missing nrpe config")
     running, code = haproxy_unit.run('service nagios-nrpe-server status')
     if running.find('running') == -1:
