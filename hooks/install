@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -uex
+
+# 'apt-get update' can encounter transient failures when the archive servers
+# are being updated. To handle this case, just call it a few times.
+apt-get update || apt-get update || apt-get update
+
+# If a password file already exists, use the password therein.
+PASSWD_FILE="/var/lib/juju/nagios.passwd"
+if [[ -e $PASSWD_FILE ]] ; then
+  PASSWORD=$(cat $PASSWD_FILE)
+else
+  # If no password file exists, use the password provided in the charm config.
+  # If no password was provided, generate a random password.
+  PASSWORD=$(config-get password)
+  if [ -z "$PASSWORD" ]; then
+    apt-get -y install pwgen --force-yes
+    PASSWORD=$(pwgen 10 1)
+  fi
+  echo $PASSWORD >$PASSWD_FILE
+  chmod 0400 $PASSWD_FILE
+fi
+
+echo nagios3-cgi nagios3/adminpassword password $PASSWORD | debconf-set-selections
+echo nagios3-cgi nagios3/adminpassword-repeat password $PASSWORD | debconf-set-selections
+
+DEBIAN_FRONTEND=noninteractive apt-get -qy \
+  install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin pynag
+
+if [ -f $CHARM_DIR/files/hostgroups_nagios2.cfg ]; then
+    # Write the new hostgroups_nagios2.cfg file to prevent servers being classified as Debian.
+    cp -v $CHARM_DIR/files/hostgroups_nagios2.cfg /etc/nagios3/conf.d/hostgroups_nagios2.cfg
+    # Remove the services configuration file to eliminiate the need for ssh and localhost groups.
+    rm -v /etc/nagios3/conf.d/services_nagios2.cfg
+    # Remove the ext file to eliminate the need for ssh and localhost groups.
+    rm -v /etc/nagios3/conf.d/extinfo_nagios2.cfg
+fi
+
+enable_livestatus=$(config-get enable_livestatus)
+livestatus_path=$(config-get livestatus_path)
+livestatus_dir=$(dirname $livestatus_path)
+
+if [ "$enable_livestatus" ]; then
+    # install check-mk-livestatus
+    DEBIAN_FRONTEND=noninteractive apt-get -qy install check-mk-livestatus
+    # fix permissions on the livestatus directory
+    mkdir -p $livestatus_dir
+    chown nagios:www-data $livestatus_dir
+    chmod g+w $livestatus_dir
+    chmod g+s $livestatus_dir
+fi
+
+if [ -f $CHARM_DIR/files/index.html ]; then
+    # Replace the default index.html file to redirect to nagios3/
+    cp -v $CHARM_DIR/files/index.html /var/www/html/index.html
+fi
+
+# || :'s are for idempotency
+service nagios3 stop || :
+dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw || :
+dpkg-statoverride --update --add nagios nagios 751 /var/lib/nagios3 || :
+service nagios3 start
+
+# For the admin interface
+open-port 80

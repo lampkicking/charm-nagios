@@ -1,0 +1,15 @@
+name: nagios
+summary: Nagios Core 3 monitoring.
+maintainers: [ "Marco Ceppi <marco@ceppi.net>", "Eric Mislivec <emislivec@nagios.com>" ]
+description: |
+  Nagios is a monitoring and management system for hosts, services, and
+  networks.
+tags: ["monitoring"]
+provides:
+  website:
+    interface: http
+requires:
+  nagios:
+    interface: juju-info
+  monitors:
+    interface: monitors
