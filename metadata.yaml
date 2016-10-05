@@ -5,6 +5,9 @@ description: |
   Nagios is a monitoring and management system for hosts, services, and
   networks.
 tags: ["monitoring"]
+series:
+  - trusty
+  - xenial
 provides:
   website:
     interface: http
