@@ -44,12 +44,12 @@ except:
 ##
 # Set relationship aliases
 ##
-mysql_unit = d.sentry.unit['mysql/0']
-nagios_unit = d.sentry.unit['nagios/0']
-haproxy_unit = d.sentry.unit['haproxy/0']
+mysql_unit = d.sentry['mysql'][0]
+nagios_unit = d.sentry['nagios'][0]
+haproxy_unit = d.sentry['haproxy'][0]
 
 # Fetch nagios private address through the relation data
-sql_paddr = d.sentry.unit['nagios/0'].relation('monitors', 'mysql:monitors')['private-address']
+sql_paddr = d.sentry['nagios'][0].relation('monitors', 'mysql:monitors')['private-address']
 
 
 # Mysql has a nice built in monitoring relationship with nagios

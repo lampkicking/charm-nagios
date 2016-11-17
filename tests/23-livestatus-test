@@ -23,7 +23,7 @@ except:
 ##
 # Set relationship aliases
 ##
-nagios_unit = d.sentry.unit['nagios/0']
+nagios_unit = d.sentry['nagios'][0]
 
 d.configure('nagios', {
     'enable_livestatus': True

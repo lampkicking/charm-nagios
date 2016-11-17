@@ -28,9 +28,9 @@ except:
 ##
 # Set relationship aliases
 ##
-mysql_unit = d.sentry.unit['mysql/0']
-mediawiki_unit = d.sentry.unit['mediawiki/0']
-nagios_unit = d.sentry.unit['nagios/0']
+mysql_unit = d.sentry['mysql'][0]
+mediawiki_unit = d.sentry['mediawiki'][0]
+nagios_unit = d.sentry['nagios'][0]
 
 
 # Validate that the web interface has htpasswd authentication
