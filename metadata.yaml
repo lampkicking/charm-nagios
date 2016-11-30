@@ -1,6 +1,8 @@
 name: nagios
 summary: Nagios Core 3 monitoring.
-maintainers: [ "Marco Ceppi <marco@ceppi.net>", "Eric Mislivec <emislivec@nagios.com>" ]
+maintainers:
+  - Marco Ceppi <marco@ceppi.net>
+  - Nagios Charm Developers <nagios-charmers@lists.launchpad.net>
 description: |
   Nagios is a monitoring and management system for hosts, services, and
   networks.
