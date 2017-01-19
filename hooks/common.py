@@ -171,7 +171,7 @@ def customize_nrpe(service, name, extra):
     elif 'command' in extra:
         cmd_args.extend(('-c', extra['command']))
     else:
-        return False
+        cmd_args.extend(('-c', extra))
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
     service.set_attribute('check_command', cmd)
