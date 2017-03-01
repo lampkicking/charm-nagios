@@ -144,3 +144,8 @@ options:
             Password to use for Nagios administrative access.  If not
             provided, a password will be generated (see documentation for
             instructions on retrieving the generated password.)
+    ro-password:
+        type: string
+        default: ''
+        description: |
+            Password to use for read-only Nagios access.  If left blank, the nagiosro account will not be created.
