@@ -131,7 +131,7 @@ def enable_pagerduty_config():
             f2.write(t2.render(template_values))
 
         # Ship the pagerduty_nagios.pl script
-        shutil.copyfile('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
+        shutil.copy('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
 
         # Create the pagerduty queue dir
         if not os.path.isdir(pagerduty_path):
