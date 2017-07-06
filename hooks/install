@@ -2,6 +2,9 @@
 
 set -uex
 
+# Tell Juju we're installing
+status-set maintenance 'Installing'
+
 # 'apt-get update' can encounter transient failures when the archive servers
 # are being updated. To handle this case, just call it a few times.
 apt-get update || apt-get update || apt-get update
@@ -64,3 +67,6 @@ service nagios3 start
 
 # For the admin interface
 open-port 80
+
+# Tell Juju we're running
+status-set active 'ready'
