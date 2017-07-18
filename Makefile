@@ -1,7 +1,7 @@
 default:
 	echo Nothing to do
 
-# Primative test runner. Someone please fix this.
+# Primitive test runner. Someone please fix this.
 test:
 	tests/00-setup
 	tests/100-deploy
