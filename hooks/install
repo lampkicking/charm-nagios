@@ -50,7 +50,7 @@ if [ "$enable_livestatus" ]; then
     # fix permissions on the livestatus directory
     mkdir -p $livestatus_dir
     chown nagios:www-data $livestatus_dir
-    chmod g+w $livestatus_dir
+    chmod ug+rwx $livestatus_dir
     chmod g+s $livestatus_dir
 fi
 
