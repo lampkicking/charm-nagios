@@ -1,3 +1,7 @@
+#!/usr/bin/make
+PYTHON := /usr/bin/python3
+export PYTHONPATH := hooks
+
 default:
 	echo Nothing to do
 
@@ -12,3 +16,13 @@ test:
 	tests/22-extraconfig-test
 	tests/23-livestatus-test
 	tests/24-pagerduty-test
+
+bin/charm_helpers_sync.py:
+	@mkdir -p bin
+	@bzr cat lp:charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py \
+        > bin/charm_helpers_sync.py
+
+sync: bin/charm_helpers_sync.py
+	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers.yaml
+
+

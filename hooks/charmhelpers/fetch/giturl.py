@@ -13,51 +13,46 @@
 # limitations under the License.
 
 import os
-from subprocess import check_call
+from subprocess import check_call, CalledProcessError
 from charmhelpers.fetch import (
     BaseFetchHandler,
     UnhandledSource,
     filter_installed_packages,
     install,
 )
-from charmhelpers.core.host import mkdir
+
+if filter_installed_packages(['git']) != []:
+    install(['git'])
+    if filter_installed_packages(['git']) != []:
+        raise NotImplementedError('Unable to install git')
 
 
-if filter_installed_packages(['bzr']) != []:
-    install(['bzr'])
-    if filter_installed_packages(['bzr']) != []:
-        raise NotImplementedError('Unable to install bzr')
-
-
-class BzrUrlFetchHandler(BaseFetchHandler):
-    """Handler for bazaar branches via generic and lp URLs."""
+class GitUrlFetchHandler(BaseFetchHandler):
+    """Handler for git branches via generic and github URLs."""
 
     def can_handle(self, source):
         url_parts = self.parse_url(source)
-        if url_parts.scheme not in ('bzr+ssh', 'lp', ''):
+        # TODO (mattyw) no support for ssh git@ yet
+        if url_parts.scheme not in ('http', 'https', 'git', ''):
             return False
         elif not url_parts.scheme:
-            return os.path.exists(os.path.join(source, '.bzr'))
+            return os.path.exists(os.path.join(source, '.git'))
         else:
             return True
 
-    def branch(self, source, dest, revno=None):
+    def clone(self, source, dest, branch="master", depth=None):
         if not self.can_handle(source):
             raise UnhandledSource("Cannot handle {}".format(source))
-        cmd_opts = []
-        if revno:
-            cmd_opts += ['-r', str(revno)]
+
         if os.path.exists(dest):
-            cmd = ['bzr', 'pull']
-            cmd += cmd_opts
-            cmd += ['--overwrite', '-d', dest, source]
+            cmd = ['git', '-C', dest, 'pull', source, branch]
         else:
-            cmd = ['bzr', 'branch']
-            cmd += cmd_opts
-            cmd += [source, dest]
+            cmd = ['git', 'clone', source, dest, '--branch', branch]
+            if depth:
+                cmd.extend(['--depth', depth])
         check_call(cmd)
 
-    def install(self, source, dest=None, revno=None):
+    def install(self, source, branch="master", dest=None, depth=None):
         url_parts = self.parse_url(source)
         branch_name = url_parts.path.strip("/").split("/")[-1]
         if dest:
@@ -65,12 +60,10 @@ class BzrUrlFetchHandler(BaseFetchHandler):
         else:
             dest_dir = os.path.join(os.environ.get('CHARM_DIR'), "fetched",
                                     branch_name)
-
-        if dest and not os.path.exists(dest):
-            mkdir(dest, perms=0o755)
-
         try:
-            self.branch(source, dest_dir, revno)
+            self.clone(source, dest_dir, branch, depth)
+        except CalledProcessError as e:
+            raise UnhandledSource(e)
         except OSError as e:
             raise UnhandledSource(e.strerror)
         return dest_dir

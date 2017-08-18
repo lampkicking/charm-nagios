@@ -1,13 +1,23 @@
-import logging
+# Copyright 2014-2015 Canonical Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from os.path import join as path_join
 from os.path import exists
 import subprocess
 
-
-log = logging.getLogger("service_ca")
-
-logging.basicConfig(level=logging.DEBUG)
+from charmhelpers.core.hookenv import log, DEBUG
 
 STD_CERT = "standard"
 
@@ -46,7 +56,7 @@ class ServiceCA(object):
     ###############
 
     def init(self):
-        log.debug("initializing service ca")
+        log("initializing service ca", level=DEBUG)
         if not exists(self.ca_dir):
             self._init_ca_dir(self.ca_dir)
             self._init_ca()
@@ -75,23 +85,23 @@ class ServiceCA(object):
                 os.mkdir(sd)
 
         if not exists(path_join(ca_dir, 'serial')):
-            with open(path_join(ca_dir, 'serial'), 'wb') as fh:
+            with open(path_join(ca_dir, 'serial'), 'w') as fh:
                 fh.write('02\n')
 
         if not exists(path_join(ca_dir, 'index.txt')):
-            with open(path_join(ca_dir, 'index.txt'), 'wb') as fh:
+            with open(path_join(ca_dir, 'index.txt'), 'w') as fh:
                 fh.write('')
 
     def _init_ca(self):
         """Generate the root ca's cert and key.
         """
         if not exists(path_join(self.ca_dir, 'ca.cnf')):
-            with open(path_join(self.ca_dir, 'ca.cnf'), 'wb') as fh:
+            with open(path_join(self.ca_dir, 'ca.cnf'), 'w') as fh:
                 fh.write(
                     CA_CONF_TEMPLATE % (self.get_conf_variables()))
 
         if not exists(path_join(self.ca_dir, 'signing.cnf')):
-            with open(path_join(self.ca_dir, 'signing.cnf'), 'wb') as fh:
+            with open(path_join(self.ca_dir, 'signing.cnf'), 'w') as fh:
                 fh.write(
                     SIGNING_CONF_TEMPLATE % (self.get_conf_variables()))
 
@@ -103,7 +113,7 @@ class ServiceCA(object):
                '-keyout', self.ca_key, '-out', self.ca_cert,
                '-outform', 'PEM']
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        log.debug("CA Init:\n %s", output)
+        log("CA Init:\n %s" % output, level=DEBUG)
 
     def get_conf_variables(self):
         return dict(
@@ -127,7 +137,7 @@ class ServiceCA(object):
         return self.get_certificate(common_name)
 
     def get_certificate(self, common_name):
-        if not common_name in self:
+        if common_name not in self:
             raise ValueError("No certificate for %s" % common_name)
         key_p = path_join(self.ca_dir, "certs", "%s.key" % common_name)
         crt_p = path_join(self.ca_dir, "certs", "%s.crt" % common_name)
@@ -147,15 +157,15 @@ class ServiceCA(object):
         subj = '/O=%(org_name)s/OU=%(org_unit_name)s/CN=%(common_name)s' % (
             template_vars)
 
-        log.debug("CA Create Cert %s", common_name)
+        log("CA Create Cert %s" % common_name, level=DEBUG)
         cmd = ['openssl', 'req', '-sha1', '-newkey', 'rsa:2048',
                '-nodes', '-days', self.default_expiry,
                '-keyout', key_p, '-out', csr_p, '-subj', subj]
-        subprocess.check_call(cmd)
+        subprocess.check_call(cmd, stderr=subprocess.PIPE)
         cmd = ['openssl', 'rsa', '-in', key_p, '-out', key_p]
-        subprocess.check_call(cmd)
+        subprocess.check_call(cmd, stderr=subprocess.PIPE)
 
-        log.debug("CA Sign Cert %s", common_name)
+        log("CA Sign Cert %s" % common_name, level=DEBUG)
         if self.cert_type == MYSQL_CERT:
             cmd = ['openssl', 'x509', '-req',
                    '-in', csr_p, '-days', self.default_expiry,
@@ -166,8 +176,8 @@ class ServiceCA(object):
                    '-extensions', 'req_extensions',
                    '-days', self.default_expiry, '-notext',
                    '-in', csr_p, '-out', crt_p, '-subj', subj, '-batch']
-        log.debug("running %s", " ".join(cmd))
-        subprocess.check_call(cmd)
+        log("running %s" % " ".join(cmd), level=DEBUG)
+        subprocess.check_call(cmd, stderr=subprocess.PIPE)
 
     def get_ca_bundle(self):
         with open(self.ca_cert) as fh:
