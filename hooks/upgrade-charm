@@ -222,6 +222,14 @@ def enable_ssl():
 
 
 def update_config():
+    host_context = hookenv.config('nagios_host_context')
+    principal_unitname = hookenv.principal_unit()
+    # Fallback to using "primary" if it exists.
+    if not principal_unitname:
+        for relunit in self[self.name]:
+            if relunit.get('primary', 'False').lower() == 'true':
+                principal_unitname = relunit['__unit__']
+                break
     template_values = {'nagios_user': nagios_user,
                        'nagios_group': nagios_group,
                        'enable_livestatus': enable_livestatus,
@@ -238,7 +246,11 @@ def update_config():
                        'admin_pager': hookenv.config('admin_pager'),
                        'log_rotation_method': hookenv.config('log_rotation_method'),
                        'log_archive_path': hookenv.config('log_archive_path'),
-                       'use_syslog': hookenv.config('use_syslog')}
+                       'use_syslog': hookenv.config('use_syslog'),
+                       'monitor_self': hookenv.config('monitor_self'),
+                       'nagios_hostname': "{}-{}".format(host_context,principal_unitname).replace('/', '-'),
+                       'load_monitor': hookenv.config('load_monitor'),
+                       }
 
     with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
         templateDef = f.read()
@@ -247,7 +259,14 @@ def update_config():
     with open(nagios_cfg, 'w') as f:
         f.write(t.render(template_values))
 
+    with open('hooks/templates/localhost_nagios2.cfg.tmpl', 'r') as f:
+        templateDef = f.read()
+    t = Template(templateDef)
+    with open('/etc/nagios3/conf.d/localhost_nagios2.cfg', 'w') as f:
+        f.write(t.render(template_values))
+
     host.service_reload('nagios3')
+
 
 # Nagios3 is deployed as a global apache application from the archive.
 # We'll get a little funky and add the SSL keys to the default-ssl config

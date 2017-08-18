@@ -144,3 +144,24 @@ options:
             Password to use for Nagios administrative access.  If not
             provided, a password will be generated (see documentation for
             instructions on retrieving the generated password.)
+    monitor_self:
+        type: boolean
+        default: true
+        description: |
+            If true, enable monitoring of the nagios unit itself.
+    nagios_host_context:
+        default: "juju"
+        type: string
+        description: |
+            a string that will be prepended to instance name to set the host name
+            in nagios. So for instance the hostname would be something like:
+                juju-postgresql-0
+            If you're running multiple environments with the same services in them
+            this allows you to differentiate between them.
+    load_monitor:
+        default: '5.0!4.0!3.0!10.0!6.0!4.0'
+        type: string
+        description: |
+            A string to pass to the Nagios load monitoring command.  Default is
+            to report warning at 5.0, 4.0 and 3.0 averages, critical at 10.0, 
+            6.0 and 4.0.
