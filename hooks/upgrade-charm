@@ -106,7 +106,7 @@ def enable_livestatus_config():
         os.chown(livestatus_dir, uid, gid)
         st = os.stat(livestatus_path)
         os.chmod(livestatus_path, st.st_mode | stat.S_IRGRP)
-        os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP | stat.S_ISGID)
+        os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP | stat.S_ISGID | stat.S_IXUSR | stat.S_IXGRP)
 
 
 def enable_pagerduty_config():
