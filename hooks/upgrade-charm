@@ -225,13 +225,13 @@ def enable_ssl():
 
 def update_config():
     host_context = hookenv.config('nagios_host_context')
+    local_host_name = 'nagios'
     principal_unitname = hookenv.principal_unit()
     # Fallback to using "primary" if it exists.
-    if not principal_unitname:
-        for relunit in self[self.name]:
-            if relunit.get('primary', 'False').lower() == 'true':
-                principal_unitname = relunit['__unit__']
-                break
+    if principal_unitname:
+        local_host_name = principal_unitname
+    else:
+        local_host_name = hookenv.local_unit().replace('/', '-')
     template_values = {'nagios_user': nagios_user,
                        'nagios_group': nagios_group,
                        'enable_livestatus': enable_livestatus,
@@ -250,7 +250,7 @@ def update_config():
                        'log_archive_path': hookenv.config('log_archive_path'),
                        'use_syslog': hookenv.config('use_syslog'),
                        'monitor_self': hookenv.config('monitor_self'),
-                       'nagios_hostname': "{}-{}".format(host_context,principal_unitname).replace('/', '-'),
+                       'nagios_hostname': "{}-{}".format(host_context, local_host_name),
                        'load_monitor': hookenv.config('load_monitor'),
                        }
 
@@ -320,6 +320,7 @@ def update_apache():
 
     host.service_reload('apache2')
 
+
 def update_password(account, password):
     """Update the charm and Apache's record of the password for the supplied account."""
     account_file = ''.join(['/var/lib/juju/nagios.', account, '.passwd'])
@@ -327,12 +328,13 @@ def update_password(account, password):
         with open(account_file, 'w') as f:
             f.write(password)
         subprocess.call(['htpasswd', '-b', '/etc/nagios3/htpasswd.users',
-            account, password])
+                        account, password])
     else:
         """ password was empty, it has been removed. We should delete the account """
         os.path.isfile(account_file) and os.remove(account_file)
         subprocess.call(['htpasswd', '-D', '/etc/nagios3/htpasswd.users',
-            account])
+                        account])
+
 
 warn_legacy_relations()
 write_extra_config()
