@@ -112,6 +112,8 @@ def enable_livestatus_config():
 def enable_pagerduty_config():
     if enable_pagerduty:
         hookenv.log("Pagerduty is enabled")
+        fetch.apt_update()
+        fetch.apt_install('libhttp-parser-perl')
 
         # Ship the pagerduty_nagios.cfg file
         template_values = {'enable_pagerduty': enable_pagerduty,
