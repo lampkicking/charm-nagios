@@ -93,8 +93,9 @@ def main(argv):
     all_hosts = {}
     for relid, units in all_relations.items():
         for unit, relation_settings in units.iteritems():
-            machine_id = relation_settings['machine_id']
-            all_hosts[machine_id] = relation_settings['target-id']
+            machine_id = relation_settings.get('machine_id', None)
+            if machine_id:
+                all_hosts[machine_id] = relation_settings['target-id']
     for relid, units in all_relations.items():
         apply_relation_config(relid, units, all_hosts)
     refresh_hostgroups()
