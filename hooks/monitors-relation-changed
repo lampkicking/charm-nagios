@@ -112,7 +112,7 @@ def apply_relation_config(relid, units, all_hosts):
             container_regex = re.compile("(\d*)/lx[cd]/\d*")
             if container_regex.search(machine_id):
                 parent_machine = container_regex.search(machine_id).group(1)
-                if all_hosts[parent_machine]:
+                if parent_machine in all_hosts:
                     parent_host = all_hosts[parent_machine]
 
         # If not set, we don't mess with it, as multiple services may feed
