@@ -22,13 +22,13 @@ import subprocess
 import yaml
 import json
 import re
-import string
 
 
 from common import (customize_service, get_pynag_host,
         get_pynag_service, refresh_hostgroups,
         get_valid_relations, get_valid_units,
-        initialize_inprogress_config, flush_inprogress_config)
+        initialize_inprogress_config, flush_inprogress_config,
+        ingress_address)
 
 
 def main(argv):
@@ -60,12 +60,12 @@ def main(argv):
                             or 'target-id' not in relation_settings):
                         continue
                     if ('target-id' in relation_settings and 'target-address' not in relation_settings):
-                            relation_settings['target-address'] = relation_settings['private-address']
+                            relation_settings['target-address'] = ingress_address(relation_settings)
 
                 else:
                     # Fake it for the more generic 'nagios' relation'
                     relation_settings['target-id'] = unit.replace('/','-')
-                    relation_settings['target-address'] = relation_settings['private-address']
+                    relation_settings['target-address'] = ingress_address(relation_settings)
                     relation_settings['monitors'] = {'monitors': {'remote': {} } }
 
                 if relid not in all_relations:

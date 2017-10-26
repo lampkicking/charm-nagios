@@ -1,17 +1,53 @@
-#!/bin/bash
-if [ -n "$JUJU_RELATION_ID" ] ; then
-    # single relation joined
-    rels=$JUJU_RELATION_ID
-else
-    # Refresh from upgrade or some other place
-    rels=`relation-ids mymonitors`
-fi
+#!/usr/bin/python
+# mymonitors-relation-joined - adds monitors.yaml content to relation data
+# Copyright Canonical 2017 Canonical Ltd. All Rights Reserved
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-target_id=${JUJU_UNIT_NAME//\//-}
+import common
 
-for rel in $rels ; do
-    relation-set -r $rel \
-        monitors="`cat monitors.yaml`" \
-        target-address=`unit-get private-address` \
-        target-id=$target_id
-done
+from charmhelpers.core.hookenv import (
+    local_unit,
+    log,
+    relation_id,
+    relation_ids,
+    relation_set,
+)
+
+def main():
+    rel_id = relation_id()
+    if rel_id is None:
+        rels = relation_ids("mymonitors")
+    else:
+        rels = [rel_id]
+
+    with open('monitors.yaml', 'r') as monitors:
+        monitors_yaml=monitors.read()
+    target_id = local_unit().replace('/', '-')
+    target_address = common.get_local_ingress_address('monitors')
+
+    relation_data={
+        'monitors': monitors_yaml,
+        'target-address': target_address,
+        'target-id': target_id
+    }
+    log('mymonitors data:\n%s' % relation_data)
+
+    for rel_id in rels:
+        log('setting monitors data for %s' % rel_id)
+        relation_set(rel_id, **relation_data)
+
+
+if __name__ == '__main__':
+    main()

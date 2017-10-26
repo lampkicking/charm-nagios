@@ -1082,6 +1082,35 @@ def network_get_primary_address(binding):
     return subprocess.check_output(cmd).decode('UTF-8').strip()
 
 
+@translate_exc(from_exc=OSError, to_exc=NotImplementedError)
+def network_get(endpoint, relation_id=None):
+    """
+    Retrieve the network details for a relation endpoint
+
+    :param endpoint: string. The name of a relation endpoint
+    :param relation_id: int. The ID of the relation for the current context.
+    :return: dict. The loaded YAML output of the network-get query.
+    :raise: NotImplementedError if run on Juju < 2.1
+    """
+    cmd = ['network-get', endpoint, '--format', 'yaml']
+    if relation_id:
+        cmd.append('-r')
+        cmd.append(relation_id)
+    try:
+        response = subprocess.check_output(
+            cmd,
+            stderr=subprocess.STDOUT).decode('UTF-8').strip()
+    except CalledProcessError as e:
+        # Early versions of Juju 2.0.x required the --primary-address argument.
+        # We catch that condition here and raise NotImplementedError since
+        # the requested semantics are not available - the caller can then
+        # use the network_get_primary_address() method instead.
+        if '--primary-address is currently required' in e.output.decode('UTF-8'):
+            raise NotImplementedError
+        raise
+    return yaml.safe_load(response)
+
+
 def add_metric(*args, **kwargs):
     """Add metric values. Values may be expressed with keyword arguments. For
     metric names containing dashes, these may be expressed as one or more
