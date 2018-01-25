@@ -7,6 +7,13 @@ import sqlite3
 import shutil
 import tempfile
 
+from charmhelpers.core.hookenv import (
+    log,
+    network_get,
+    network_get_primary_address,
+    unit_get,
+)
+
 from pynag import Model
 
 INPROGRESS_DIR = '/etc/nagios3-inprogress'
@@ -35,12 +42,49 @@ def check_ip(n):
         except socket.error:
             return False
 
+def ingress_address(relation_data):
+    if 'ingress-address' in relation_data:
+        return relation_data['ingress-address']
+    return relation_data['private-address']
 
-def get_ip_and_hostname(remote_unit, relation_id=None):
-    args = ["relation-get", "private-address", remote_unit]
+
+def get_local_ingress_address(binding='website'):
+    # using network-get to retrieve the address details if available.
+    log('Getting hostname for binding %s' % binding)
+    try:
+        network_info = network_get(binding)
+        if network_info is not None and 'ingress-addresses' in network_info:
+            log('Using ingress-addresses')
+            hostname = network_info['ingress-addresses'][0]
+            log(hostname)
+            return hostname
+    except NotImplementedError:
+        # We'll fallthrough to the Pre 2.3 code below.
+        pass
+
+    # Pre 2.3 output
+    try:
+        hostname = network_get_primary_address(binding)
+        log('Using primary-addresses')
+    except NotImplementedError:
+        # pre Juju 2.0
+        hostname = unit_get('private_address')
+        log('Using unit_get private address')
+    log(hostname)
+    return hostname
+
+
+def get_remote_relation_attr(remote_unit, attr_name, relation_id=None):
+    args = ["relation-get", attr_name, remote_unit]
     if relation_id is not None:
         args.extend(['-r', relation_id])
-    hostname = subprocess.check_output(args).strip()
+    return subprocess.check_output(args).strip()
+
+
+def get_ip_and_hostname(remote_unit, relation_id=None):
+    hostname = get_remote_relation_attr(remote_unit, 'ingress-address', relation_id)
+    if hostname is None or not len(hostname):
+        hostname = get_remote_relation_attr(remote_unit, 'private-address', relation_id)
 
     if hostname is None or not len(hostname):
         print "relation-get failed"
