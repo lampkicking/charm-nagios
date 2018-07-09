@@ -8,8 +8,9 @@ description: |
   networks.
 tags: ["monitoring"]
 series:
-  - trusty
   - xenial
+  - bionic
+  - trusty
 provides:
   website:
     interface: http
