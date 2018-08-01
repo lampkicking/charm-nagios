@@ -26,6 +26,7 @@ livestatus_path = hookenv.config('livestatus_path')
 enable_pagerduty = hookenv.config('enable_pagerduty')
 pagerduty_key = hookenv.config('pagerduty_key')
 pagerduty_path = hookenv.config('pagerduty_path')
+notification_levels = hookenv.config('pagerduty_notification_levels')
 nagios_user = hookenv.config('nagios_user')
 nagios_group = hookenv.config('nagios_group')
 ssl_config = hookenv.config('ssl')
@@ -123,7 +124,8 @@ def enable_pagerduty_config():
         template_values = {'enable_pagerduty': enable_pagerduty,
                            'pagerduty_key': pagerduty_key,
                            'pagerduty_path': pagerduty_path,
-                           'proxy_switch': proxy_switch}
+                           'proxy_switch': proxy_switch,
+                           'notification_levels': notification_levels}
 
         with open('hooks/templates/pagerduty_nagios_cfg.tmpl', 'r') as f:
             templateDef = f.read()
