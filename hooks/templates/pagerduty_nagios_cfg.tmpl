@@ -7,7 +7,7 @@ define contact {
        alias                                    PagerDuty Pseudo-Contact
        service_notification_period              24x7
        host_notification_period                 24x7
-       service_notification_options             w,u,c,r
+       service_notification_options             {{ notification_levels }}
        host_notification_options                d,r
        service_notification_commands            notify-service-by-pagerduty
        host_notification_commands               notify-host-by-pagerduty
