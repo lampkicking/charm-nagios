@@ -278,7 +278,7 @@ def update_config():
                        'log_archive_path': hookenv.config('log_archive_path'),
                        'use_syslog': hookenv.config('use_syslog'),
                        'monitor_self': hookenv.config('monitor_self'),
-                       'nagios_hostname': "{}-{}".format(host_context, local_host_name),
+                       'nagios_hostname': "{}.{}".format(local_host_name, host_context),
                        'load_monitor': hookenv.config('load_monitor'),
                        'is_container': host.is_container(),
                        'service_check_timeout': hookenv.config('service_check_timeout'),

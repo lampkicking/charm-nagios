@@ -137,7 +137,8 @@ def apply_relation_config(relid, units, all_hosts):
 
         for mon_family, mons in monitors['monitors']['remote'].iteritems():
             for mon_name, mon in mons.iteritems():
-                service_name = '%s-%s' % (target_id, mon_name)
+                #service_name = '%s-%s' % (target_id, mon_name)
+                service_name = '%s' % mon_name
                 service = get_pynag_service(target_id, service_name)
                 if customize_service(service, mon_family, mon_name, mon):
                     service.save()
