@@ -177,3 +177,10 @@ options:
             A string to use for the service_notification_options in the
             pagerduty contact configuration.  Remove w to avoid paging for
             warning events.
+    check_timeout:
+        default: 10
+        type: int
+        description: |
+            A number of seconds before nrpe checks timeout from not being able
+            to connect to the client or finish execution of the command.
+            Raise this value to combat 'CHECK_NRPE Socket timeout alerts'

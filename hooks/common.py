@@ -12,6 +12,7 @@ from charmhelpers.core.hookenv import (
     network_get,
     network_get_primary_address,
     unit_get,
+    config,
 )
 
 from pynag import Model
@@ -176,6 +177,9 @@ def customize_http(service, name, extra):
         cmd_args.extend(('-I', '$HOSTADDRESS$'))
     else:
         cmd_args.extend(('-H', '$HOSTADDRESS$'))
+    check_timeout = config('check_timeout')
+    if check_timeout is not None:
+        cmd_args.extend(('-t', check_timeout))
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
     service.set_attribute('check_command', cmd)
@@ -190,6 +194,9 @@ def customize_mysql(service, name, extra):
         _extend_args(args, cmd_args, '-u', extra['user'])
     if 'password' in extra:
         _extend_args(args, cmd_args, '-p', extra['password'])
+    check_timeout = config('check_timeout')
+    if check_timeout is not None:
+        cmd_args.extend(('-t', check_timeout))
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
     service.set_attribute('check_command', cmd)
@@ -200,6 +207,9 @@ def customize_pgsql(service, name, extra):
     plugin = os.path.join(PLUGIN_PATH, 'check_pgsql')
     args = []
     cmd_args = [plugin, '-H', '$HOSTADDRESS$']
+    check_timeout = config('check_timeout')
+    if check_timeout is not None:
+        cmd_args.extend(('-t', check_timeout))
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
     service.set_attribute('check_command', cmd)
@@ -216,6 +226,9 @@ def customize_nrpe(service, name, extra):
         cmd_args.extend(('-c', extra['command']))
     else:
         cmd_args.extend(('-c', extra))
+    check_timeout = config('check_timeout')
+    if check_timeout is not None:
+        cmd_args.extend(('-t', check_timeout))
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
     service.set_attribute('check_command', cmd)
@@ -256,6 +269,9 @@ def customize_tcp(service, name, extra):
       cmd_args.extend(('-c', extra['critical']))
     if 'timeout' in extra:
       cmd_args.extend(('-t', extra['timeout']))
+    check_timeout = config('check_timeout')
+    if check_timeout is not None:
+        cmd_args.extend(('-t', check_timeout))
 
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
