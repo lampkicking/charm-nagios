@@ -115,10 +115,9 @@ def enable_pagerduty_config():
         hookenv.log("Pagerduty is enabled")
         fetch.apt_update()
         fetch.apt_install('libhttp-parser-perl')
-        if 'https_proxy' in os.environ:
-            proxy_switch = '--proxy {}'.format(os.environ['https_proxy'])
-        else:
-            proxy_switch = ''
+        env = os.environ
+        proxy = env.get('JUJU_CHARM_HTTPS_PROXY') or env.get('https_proxy')
+        proxy_switch = '--proxy {}'.format(proxy) if proxy else ''
 
         # Ship the pagerduty_nagios.cfg file
         template_values = {'enable_pagerduty': enable_pagerduty,
