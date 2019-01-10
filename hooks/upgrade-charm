@@ -23,6 +23,7 @@ legacy_relations = hookenv.config('legacy')
 extra_config = hookenv.config('extraconfig')
 enable_livestatus = hookenv.config('enable_livestatus')
 livestatus_path = hookenv.config('livestatus_path')
+enable_opsgenie = hookenv.config('enable_opsgenie')
 enable_pagerduty = hookenv.config('enable_pagerduty')
 pagerduty_key = hookenv.config('pagerduty_key')
 pagerduty_path = hookenv.config('pagerduty_path')
@@ -161,7 +162,8 @@ def enable_pagerduty_config():
             os.remove(pagerduty_cron)
 
     # Update contacts for admin
-    template_values = {'enable_pagerduty': enable_pagerduty,
+    template_values = {'enable_opsgenie': enable_opsgenie,
+                       'enable_pagerduty': enable_pagerduty,
                        'admin_email': hookenv.config('admin_email')}
 
     with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
@@ -245,6 +247,7 @@ def update_config():
     template_values = {'nagios_user': nagios_user,
                        'nagios_group': nagios_group,
                        'enable_livestatus': enable_livestatus,
+                       'enable_opsgenie': enable_opsgenie,
                        'livestatus_path': livestatus_path,
                        'livestatus_args': hookenv.config('livestatus_args'),
                        'check_external_commands': hookenv.config('check_external_commands'),

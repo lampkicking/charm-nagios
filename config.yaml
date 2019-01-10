@@ -107,6 +107,11 @@ options:
         description: |
             Email address used for the admin pager, used by $ADMINPAGER$ in 
             notification commands.
+    enable_opsgenie:
+        type: boolean
+        default: false
+        description: |
+            Config variable to enable opsgenie.
     enable_pagerduty:
         type: boolean
         default: false
