@@ -35,9 +35,9 @@ if [ -f $CHARM_DIR/files/hostgroups_nagios2.cfg ]; then
     # Write the new hostgroups_nagios2.cfg file to prevent servers being classified as Debian.
     cp -v $CHARM_DIR/files/hostgroups_nagios2.cfg /etc/nagios3/conf.d/hostgroups_nagios2.cfg
     # Remove the services configuration file to eliminiate the need for ssh and localhost groups.
-    rm -v /etc/nagios3/conf.d/services_nagios2.cfg
+    rm -vf /etc/nagios3/conf.d/services_nagios2.cfg
     # Remove the ext file to eliminate the need for ssh and localhost groups.
-    rm -v /etc/nagios3/conf.d/extinfo_nagios2.cfg
+    rm -vf /etc/nagios3/conf.d/extinfo_nagios2.cfg
 fi
 
 enable_livestatus=$(config-get enable_livestatus)
