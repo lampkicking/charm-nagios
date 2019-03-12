@@ -53,7 +53,7 @@ define service{
         use                             generic-service         ; Name of service template to use
         host_name                       {{ nagios_hostname }}
         service_description             Total Processes
-        check_command                   check_procs!250!400
+        check_command                   check_procs!600!900
         }
 
 
