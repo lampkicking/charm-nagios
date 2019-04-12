@@ -129,7 +129,7 @@ use_ssl_authentication=0
 # not use authorization.  You may use an asterisk (*) to
 # authorize any user who has authenticated to the web server.
 
-authorized_for_system_information={{ nagiosadmin }}
+authorized_for_system_information=*
 
 
 
@@ -141,7 +141,7 @@ authorized_for_system_information={{ nagiosadmin }}
 # an asterisk (*) to authorize any user who has authenticated
 # to the web server.
 
-authorized_for_configuration_information={{ nagiosadmin }}
+authorized_for_configuration_information=*
 
 
 
@@ -154,7 +154,7 @@ authorized_for_configuration_information={{ nagiosadmin }}
 # You may use an asterisk (*) to authorize any user who has
 # authenticated to the web server.
 
-authorized_for_system_commands={{ nagiosadmin }}
+authorized_for_system_commands=*
 
 
 
@@ -172,8 +172,8 @@ authorized_for_read_only=nagiosro
 authorized_for_all_services={{ nagiosadmin }},nagiosro
 authorized_for_all_hosts={{ nagiosadmin }},nagiosro
 {% else %}
-authorized_for_all_services={{ nagiosadmin }}
-authorized_for_all_hosts={{ nagiosadmin }}
+authorized_for_all_services=*
+authorized_for_all_hosts=*
 {% endif %}
 
 
@@ -187,8 +187,8 @@ authorized_for_all_hosts={{ nagiosadmin }}
 # authorization).  You may use an asterisk (*) to authorize any
 # user who has authenticated to the web server.
 
-authorized_for_all_service_commands={{ nagiosadmin }}
-authorized_for_all_host_commands={{ nagiosadmin }}
+authorized_for_all_service_commands=*
+authorized_for_all_host_commands=*
 
 
 
