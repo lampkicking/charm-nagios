@@ -107,7 +107,8 @@ def enable_livestatus_config():
         os.chown(livestatus_dir, uid, gid)
         st = os.stat(livestatus_path)
         os.chmod(livestatus_path, st.st_mode | stat.S_IRGRP)
-        os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP | stat.S_ISGID | stat.S_IXUSR | stat.S_IXGRP)
+        os.chmod(livestatus_dir, st.st_mode | stat.S_IRGRP |
+                 stat.S_ISGID | stat.S_IXUSR | stat.S_IXGRP)
 
 
 def enable_pagerduty_config():
@@ -141,7 +142,8 @@ def enable_pagerduty_config():
             f2.write(t2.render(template_values))
 
         # Ship the pagerduty_nagios.pl script
-        shutil.copy('files/pagerduty_nagios.pl', '/usr/local/bin/pagerduty_nagios.pl')
+        shutil.copy('files/pagerduty_nagios.pl',
+                    '/usr/local/bin/pagerduty_nagios.pl')
 
         # Create the pagerduty queue dir
         if not os.path.isdir(pagerduty_path):
@@ -309,7 +311,7 @@ def update_apache():
         templateDef = f.read()
 
     t = Template(templateDef)
-    with open('/etc/apache2/sites-available/default-ssl', 'w') as f:
+    with open('/etc/apache2/sites-available/default-ssl.conf', 'w') as f:
         f.write(t.render(template_values))
     print("Value of ssl is %s" % ssl)
     if ssl_config == "only":
@@ -337,12 +339,12 @@ def update_password(account, password):
         with open(account_file, 'w') as f:
             f.write(password)
         subprocess.call(['htpasswd', '-b', '/etc/nagios3/htpasswd.users',
-                        account, password])
+                         account, password])
     else:
         """ password was empty, it has been removed. We should delete the account """
         os.path.isfile(account_file) and os.remove(account_file)
         subprocess.call(['htpasswd', '-D', '/etc/nagios3/htpasswd.users',
-                        account])
+                         account])
 
 
 warn_legacy_relations()
