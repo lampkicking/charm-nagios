@@ -7,7 +7,7 @@
 # This can serve as an example for configuring other servers;
 # Custom services specific to this host are added here, but services
 # defined in nagios2-common_services.cfg may also apply.
-# 
+#
 
 define host{
         use                     generic-host            ; Name of host template to use
@@ -28,7 +28,11 @@ define service{
         use                             generic-service         ; Name of service template to use
         host_name                       {{ nagios_hostname }}
         service_description             Disk Space
+{%- if is_container %}
+        check_command                   check_disk!20%!10%!/
+{%- else %}
         check_command                   check_all_disks!20%!10%
+{%- endif %}
         }
 
 
@@ -58,7 +62,7 @@ define service{
 
 
 
-# Define a service to check the load on the local machine. 
+# Define a service to check the load on the local machine.
 
 define service{
         use                             generic-service         ; Name of service template to use

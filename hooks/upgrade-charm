@@ -260,6 +260,7 @@ def update_config():
                        'monitor_self': hookenv.config('monitor_self'),
                        'nagios_hostname': "{}-{}".format(host_context, local_host_name),
                        'load_monitor': hookenv.config('load_monitor'),
+                       'is_container': host.is_container(),
                        }
 
     with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
@@ -357,7 +358,7 @@ update_cgi_config()
 update_password('nagiosro', ro_password)
 if password:
     update_password('nagiosadmin', password)
-    
+
 
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])
