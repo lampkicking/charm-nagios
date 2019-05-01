@@ -20,6 +20,14 @@ define host{
         icon_image              base/ubuntu.png
         }
 
+
+
+# 'check_all_disks_no_squashfs' command definition
+define command{
+        command_name    check_all_disks_no_squashfs
+        command_line    /usr/lib/nagios/plugins/check_disk -w '$ARG1$' -c '$ARG2$' -e -X squashfs
+        }
+
 # Define a service to check the disk space of the root partition
 # on the local machine.  Warning if < 20% free, critical if
 # < 10% free space on partition.
@@ -31,7 +39,7 @@ define service{
 {%- if is_container %}
         check_command                   check_disk!20%!10%!/
 {%- else %}
-        check_command                   check_all_disks!20%!10%
+        check_command                   check_all_disks_no_squashfs!20%!10%
 {%- endif %}
         }
 
