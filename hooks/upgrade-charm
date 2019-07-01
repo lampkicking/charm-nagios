@@ -263,6 +263,7 @@ def update_config():
                        'nagios_hostname': "{}-{}".format(host_context, local_host_name),
                        'load_monitor': hookenv.config('load_monitor'),
                        'is_container': host.is_container(),
+                       'service_check_timeout_state': hookenv.config('service_check_timeout_state'),
                        }
 
     with open('hooks/templates/nagios-cfg.tmpl', 'r') as f:
