@@ -171,12 +171,11 @@ options:
             to report warning at 5.0, 4.0 and 3.0 averages, critical at 10.0, 
             6.0 and 4.0.
     pagerduty_notification_levels:
-        default: w,u,c,r
+        default: u,c,r
         type: string
         description: |
             A string to use for the service_notification_options in the
-            pagerduty contact configuration.  Remove w to avoid paging for
-            warning events.
+            pagerduty contact configuration.  Add w to page for warning events.
     check_timeout:
         default: 10
         type: int
