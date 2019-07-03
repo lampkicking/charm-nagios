@@ -183,6 +183,15 @@ options:
             A number of seconds before nrpe checks timeout from not being able
             to connect to the client or finish execution of the command.
             Raise this value to combat 'CHECK_NRPE Socket timeout alerts'
+    service_check_timeout:
+        default: 60
+        type: int
+        description: |
+            Number of seconds Nagios allows for a service check before killing
+            it off.  This ties in with service_check_timeout_state.  NRPE will
+            alert for the lower of this value or check_timeout.  Also note that
+            host_check_timeout is set to 30 seconds, and it's preferred to have
+            service_check_timout greater than host_check_timeout.
     service_check_timeout_state:
         default: c
         type: string
