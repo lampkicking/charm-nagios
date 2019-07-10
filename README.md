@@ -2,7 +2,7 @@
 
 [Nagios](http://nagios.org) offers complete monitoring and alerting for servers, switches, applications, and services.
 
-This charm is designed to do basic monitoring of any service in the Charm Store that relates to it. There is an [NRPE subordinate charm](https://jujucharms.com/precise/nrpe/) that you can use if you want to use local monitors.
+This charm is designed to do basic monitoring of any service in the Charm Store that relates to it. There is an [NRPE subordinate charm](https://jujucharms.com/nrpe/) that you can use if you want to use local monitors.
 
 # Usage
 
@@ -17,7 +17,7 @@ This charm is designed to be used with other charms. In order to monitor anythin
 
 This should result in your Nagios monitoring all of the service units.
 
-There is an [NRPE subordinate charm](https://jujucharms.com/precise/nrpe/) which must be used for any local monitors.  See the `nrpe` charm's README for information on how to make use of it.
+There is an [NRPE subordinate charm](https://jujucharms.com/nrpe/) which must be used for any local monitors.  See the `nrpe` charm's README for information on how to make use of it.
 
 You can expose the service and browse to `http://x.x.x.x/nagios3` to get to the web UI, following the example:
 
