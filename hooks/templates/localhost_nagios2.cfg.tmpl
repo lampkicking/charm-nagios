@@ -22,10 +22,10 @@ define host{
 
 
 
-# 'check_all_disks_no_squashfs' command definition
+# 'check_all_disks_no_virtual_fs' command definition
 define command{
-        command_name    check_all_disks_no_squashfs
-        command_line    /usr/lib/nagios/plugins/check_disk -w '$ARG1$' -c '$ARG2$' -e -X squashfs
+        command_name    check_all_disks_no_virtual_fs
+        command_line    /usr/lib/nagios/plugins/check_disk -w '$ARG1$' -c '$ARG2$' -e -X squashfs -X tracefs -X debugfs -X procfs -X sysfs -X cgroup -X cgroup2 -X nsfs -X hugetlbfs -X bpf -X devpts
         }
 
 # Define a service to check the disk space of the root partition
