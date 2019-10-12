@@ -105,7 +105,7 @@ options:
         type: string
         default: pageroot@localhost
         description: |
-            Email address used for the admin pager, used by $ADMINPAGER$ in 
+            Email address used for the admin pager, used by $ADMINPAGER$ in
             notification commands.
     enable_pagerduty:
         type: boolean
@@ -168,7 +168,7 @@ options:
         type: string
         description: |
             A string to pass to the Nagios load monitoring command.  Default is
-            to report warning at 5.0, 4.0 and 3.0 averages, critical at 10.0, 
+            to report warning at 5.0, 4.0 and 3.0 averages, critical at 10.0,
             6.0 and 4.0.
     pagerduty_notification_levels:
         default: u,c,r
@@ -206,4 +206,21 @@ options:
             u - Unknown
             w - Warning
             o - OK
-
+    extra_contacts:
+        default: ''
+        type: string
+        description: |
+            Define extra contacts for Nagios. They will be appended in the
+            default administrators contact group. This is useful for adding
+            notification integrations with external services.
+            Contacts are passed as a YAML array, and must have a contact name,
+            a command to be executed for host notifications and a command to
+            be executed for service notifications. These commands may use all
+            relevant Nagios macros ($HOSTNAME$, $SERVICENAME$, etc). Refer to
+            the Nagios documentation for more information.
+            Only [A-Za-z0-9_-] contact names are valid. Be careful with
+            commands, since they are not sanitized.
+            Example
+            - name: contact_name_1
+              host: /custom/command/for/host $HOSTNAME$
+              service: /custom/command/for/service $SERVICENAME$
