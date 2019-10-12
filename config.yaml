@@ -115,7 +115,7 @@ options:
     admin_pager:
         type: string
         default: pageroot@localhost
-        description: >
+        description: |
             Email address used for the admin pager, used by $ADMINPAGER$ in
             notification commands.
     enable_pagerduty:
@@ -290,3 +290,21 @@ options:
         description: |
             Defines the IP or Host Name to send snmp traps to. Leave blank (empty) to disable
             the traps functionality.
+    extra_contacts:
+        default: ''
+        type: string
+        description: |
+            Define extra contacts for Nagios. They will be appended in the
+            default administrators contact group. This is useful for adding
+            notification integrations with external services.
+            Contacts are passed as a YAML array, and must have a contact name,
+            a command to be executed for host notifications and a command to
+            be executed for service notifications. These commands may use all
+            relevant Nagios macros ($HOSTNAME$, $SERVICENAME$, etc). Refer to
+            the Nagios documentation for more information.
+            Only [A-Za-z0-9_-] contact names are valid. Be careful with
+            commands, since they are not sanitized.
+            Example
+            - name: contact_name_1
+              host: /custom/command/for/host $HOSTNAME$
+              service: /custom/command/for/service $SERVICENAME$
