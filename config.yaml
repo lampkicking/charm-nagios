@@ -105,7 +105,7 @@ options:
         type: string
         default: pageroot@localhost
         description: |
-            Email address used for the admin pager, used by $ADMINPAGER$ in 
+            Email address used for the admin pager, used by $ADMINPAGER$ in
             notification commands.
     enable_pagerduty:
         type: boolean
@@ -137,6 +137,11 @@ options:
         default: 1
         description: |
             Log messages to syslog as well as main file.
+    nagiosadmin:
+        type: string
+        default: 'nagiosadmin'
+        description: |
+            Username for Nagios admin user.
     password:
         type: string
         default: ''
@@ -168,7 +173,7 @@ options:
         type: string
         description: |
             A string to pass to the Nagios load monitoring command.  Default is
-            to report warning at 5.0, 4.0 and 3.0 averages, critical at 10.0, 
+            to report warning at 5.0, 4.0 and 3.0 averages, critical at 10.0,
             6.0 and 4.0.
     pagerduty_notification_levels:
         default: u,c,r
@@ -206,4 +211,3 @@ options:
             u - Unknown
             w - Warning
             o - OK
-

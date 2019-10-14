@@ -284,7 +284,8 @@ def update_config():
 
 
 def update_cgi_config():
-    template_values = {'ro_password': ro_password}
+    template_values = {'nagiosadmin': hookenv.config('nagiosadmin'),
+                       'ro_password': ro_password}
     with open('hooks/templates/nagios-cgi.tmpl', 'r') as f:
         templateDef = f.read()
 
@@ -361,8 +362,9 @@ update_localhost()
 update_cgi_config()
 update_password('nagiosro', ro_password)
 if password:
-    update_password('nagiosadmin', password)
-
+    update_password(hookenv.config('nagiosadmin'), password)
+if hookenv.config('nagiosadmin') != 'nagiosadmin':
+    update_password('nagiosadmin', False)
 
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])
