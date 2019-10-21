@@ -39,7 +39,7 @@ define service{
 {%- if is_container %}
         check_command                   check_disk!20%!10%!/
 {%- else %}
-        check_command                   check_all_disks_no_squashfs!20%!10%
+        check_command                   check_all_disks_no_virtual_fs!20%!10%
 {%- endif %}
         }
 
