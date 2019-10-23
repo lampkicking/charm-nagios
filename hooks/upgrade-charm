@@ -67,7 +67,7 @@ def get_extra_contacts(yaml_string, log=False):
     )
 
     try:
-        extra_contacts_raw = yaml.load(yaml_string, Loader=yaml.Loader) or []
+        extra_contacts_raw = yaml.load(yaml_string, Loader=yaml.SafeLoader) or []
         if not isinstance(extra_contacts_raw, list):
             raise ValueError('not a list')
 
@@ -92,7 +92,7 @@ def get_extra_contacts(yaml_string, log=False):
 
             extra_contacts.append(contact)
 
-    except ValueError as e:
+    except (ValueError, yaml.error.YAMLError), e:
         if log:
             hookenv.log(
                 'Invalid "extra_contacts" configuration: {}'.format(e))
