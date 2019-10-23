@@ -104,7 +104,7 @@ options:
     admin_pager:
         type: string
         default: pageroot@localhost
-        description: |
+        description: >
             Email address used for the admin pager, used by $ADMINPAGER$ in
             notification commands.
     enable_pagerduty:
@@ -140,7 +140,7 @@ options:
     nagiosadmin:
         type: string
         default: 'nagiosadmin'
-        description: |
+        description: >
             Username for Nagios admin user.
     password:
         type: string
