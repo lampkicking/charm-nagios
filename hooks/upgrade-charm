@@ -233,6 +233,11 @@ def enable_ssl():
         hookenv.log("Decoded SSL files", "INFO")
 
 
+def nagios_bool(value):
+    """Convert a Python boolean into Nagios 0/1 integer representation."""
+    return int(value)
+
+
 def update_config():
     host_context = hookenv.config('nagios_host_context')
     local_host_name = 'nagios'
@@ -254,6 +259,7 @@ def update_config():
                        'debug_verbosity': hookenv.config('debug_verbosity'),
                        'debug_level': hookenv.config('debug_level'),
                        'daemon_dumps_core': hookenv.config('daemon_dumps_core'),
+                       'flap_detection': nagios_bool(hookenv.config('flap_detection')),
                        'admin_email': hookenv.config('admin_email'),
                        'admin_pager': hookenv.config('admin_pager'),
                        'log_rotation_method': hookenv.config('log_rotation_method'),

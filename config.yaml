@@ -6,6 +6,11 @@ options:
             Any additional nagios configuration you would like to
             add can be set into this element. It will be placed in
             /etc/nagios3/conf.d/extra.cfg
+    flap_detection:
+        type: boolean
+        default: true
+        description: |
+            Enable flap detection on monitored hosts and services.
     ssl:
         type: string
         default: "off"
