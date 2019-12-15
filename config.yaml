@@ -11,6 +11,12 @@ options:
         default: true
         description: |
             Enable flap detection on monitored hosts and services.
+    contactgroup-members:
+        type: string
+        default: "root"
+        description: |
+            Comma separated list of contacts to add as members of the admins
+            group.
     ssl:
         type: string
         default: "off"

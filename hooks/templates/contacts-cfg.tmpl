@@ -46,6 +46,6 @@ define contact{
 define contactgroup{
         contactgroup_name       admins
         alias                   Nagios Administrators
-        members                 root{% if enable_pagerduty -%}, pagerduty{% endif %}
+        members                 {{ contactgroup_members }}
         }
 
