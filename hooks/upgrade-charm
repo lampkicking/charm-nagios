@@ -351,6 +351,7 @@ def update_password(account, password):
     if password:
         with open(account_file, 'w') as f:
             f.write(password)
+            os.fchmod(f.fileno(), 0o0400)
         subprocess.call(['htpasswd', '-b', '/etc/nagios3/htpasswd.users',
                          account, password])
     else:
