@@ -165,7 +165,7 @@ def enable_pagerduty_config():
     if enable_pagerduty:
         # avoid duplicates
         if "pagerduty" not in contactgroup_members:
-            contactgroup_members += ", pagerduty" 
+            contactgroup_members += ", pagerduty"
 
     template_values = {'admin_email': hookenv.config('admin_email'),
                        'contactgroup_members': contactgroup_members}
@@ -379,5 +379,6 @@ if password:
 if nagiosadmin != 'nagiosadmin':
     update_password('nagiosadmin', False)
 
+subprocess.call(['scripts/postfix_loopback_only.sh'])
 subprocess.call(['hooks/mymonitors-relation-joined'])
 subprocess.call(['hooks/monitors-relation-changed'])
