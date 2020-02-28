@@ -1,15 +1,13 @@
 name: nagios
 summary: Nagios Core 3 monitoring.
-maintainers:
-  - Marco Ceppi <marco@ceppi.net>
-  - Nagios Charm Developers <nagios-charmers@lists.launchpad.net>
+maintainer: LMA Charmers <llama-charmers@lists.ubuntu.com>
 description: |
   Nagios is a monitoring and management system for hosts, services, and
   networks.
 tags: ["monitoring"]
 series:
-  - xenial
   - bionic
+  - xenial
   - trusty
 provides:
   website:
@@ -21,4 +19,3 @@ requires:
     interface: monitors
 extra-bindings:
   public:
-
