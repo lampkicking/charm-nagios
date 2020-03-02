@@ -21,12 +21,12 @@
 define contact{
         contact_name                    root
         alias                           Root
-        service_notification_period     24x7
-        host_notification_period        24x7
-        service_notification_options    w,u,c,r
-        host_notification_options       d,r
-        service_notification_commands   notify-service-by-email
-        host_notification_commands      notify-host-by-email
+        service_notification_period     {{ admin_service_notification_period }}
+        host_notification_period        {{ admin_host_notification_period }}
+        service_notification_options    {{ admin_service_notification_options }}
+        host_notification_options       {{ admin_host_notification_options }}
+        service_notification_commands   {{ admin_service_notification_commands }}
+        host_notification_commands      {{ admin_host_notification_commands }}
         email                           {{ admin_email }}
         }
 
