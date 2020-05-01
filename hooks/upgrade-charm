@@ -167,7 +167,13 @@ def enable_pagerduty_config():
         if "pagerduty" not in contactgroup_members:
             contactgroup_members += ", pagerduty"
 
-    template_values = {'admin_email': hookenv.config('admin_email'),
+    template_values = {'admin_service_notification_period': hookenv.config('admin_service_notification_period'),
+                       'admin_host_notification_period': hookenv.config('admin_host_notification_period'),
+                       'admin_service_notification_options': hookenv.config('admin_service_notification_options'),
+                       'admin_host_notification_options': hookenv.config('admin_host_notification_options'),
+                       'admin_service_notification_commands': hookenv.config('admin_service_notification_commands'),
+                       'admin_host_notification_commands': hookenv.config('admin_host_notification_commands'),
+                       'admin_email': hookenv.config('admin_email'),
                        'contactgroup_members': contactgroup_members}
 
     with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
