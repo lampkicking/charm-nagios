@@ -284,3 +284,9 @@ options:
             Change this or add commands if you have custom notification plugins.
             Multiple notification commands should be separated by commas.
             All notification commands are executed when the contact needs to be notified.
+    send_traps_to:
+        default: ""
+        type: string
+        description: |
+            Defines the IP or Host Name to send snmp traps to. Leave blank (empty) to disable
+            the traps functionality.

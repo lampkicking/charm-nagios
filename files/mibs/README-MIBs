@@ -1,0 +1,17 @@
+# These files change once in a lifetime (most have not changed in 10 years)
+# There are no packages in the standard repos that contain any of them
+# Anyway, to check for new versions, here are the sources:
+
+# nagios
+https://raw.githubusercontent.com/nagios-plugins/nagios-mib/master/MIB/NAGIOS-ROOT-MIB
+https://raw.githubusercontent.com/nagios-plugins/nagios-mib/master/MIB/NAGIOS-NOTIFY-MIB
+
+# net-snmp
+https://sourceforge.net/p/net-snmp/code/ci/master/tree/mibs/SNMPv2-SMI.txt?format=raw
+https://sourceforge.net/p/net-snmp/code/ci/master/tree/mibs/SNMPv2-MIB.txt?format=raw
+https://sourceforge.net/p/net-snmp/code/ci/master/tree/mibs/SNMPv2-TC.txt?format=raw
+
+# net-snmp alternative source
+https://raw.githubusercontent.com/hardaker/net-snmp/master/mibs/SNMPv2-SMI.txt
+https://raw.githubusercontent.com/hardaker/net-snmp/master/mibs/SNMPv2-MIB.txt
+https://raw.githubusercontent.com/hardaker/net-snmp/master/mibs/SNMPv2-TC.txt

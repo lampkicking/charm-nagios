@@ -35,11 +35,16 @@ cert_domain = hookenv.unit_get('public-address')
 nagios_cfg = "/etc/nagios3/nagios.cfg"
 nagios_cgi_cfg = "/etc/nagios3/cgi.cfg"
 pagerduty_cfg = "/etc/nagios3/conf.d/pagerduty_nagios.cfg"
+traps_cfg = "/etc/nagios3/conf.d/traps.cfg"
 pagerduty_cron = "/etc/cron.d/nagios-pagerduty-flush"
 password = hookenv.config('password')
 ro_password = hookenv.config('ro-password')
 nagiosadmin = hookenv.config('nagiosadmin') or 'nagiosadmin'
+contactgroup_members = hookenv.config("contactgroup-members")
 
+# this global var will collect contactgroup members that must be forced
+# it will be changed by functions
+forced_contactgroup_members = []
 
 # Checks the charm relations for legacy relations
 # Inserts warnings into the log about legacy relations, as they will be removed
@@ -113,6 +118,8 @@ def enable_livestatus_config():
 
 
 def enable_pagerduty_config():
+    global  forced_contactgroup_members
+
     if enable_pagerduty:
         hookenv.log("Pagerduty is enabled")
         fetch.apt_update()
@@ -161,11 +168,42 @@ def enable_pagerduty_config():
             os.remove(pagerduty_cron)
 
     # Update contacts for admin
-    contactgroup_members = hookenv.config("contactgroup-members")
     if enable_pagerduty:
         # avoid duplicates
         if "pagerduty" not in contactgroup_members:
-            contactgroup_members += ", pagerduty"
+            forced_contactgroup_members.append('pagerduty')
+
+def enable_traps_config():
+    global forced_contactgroup_members
+
+    send_traps_to = hookenv.config('send_traps_to')
+
+    if not send_traps_to:
+        if os.path.isfile(traps_cfg):
+            os.remove(traps_cfg)
+        hookenv.log("Send traps feature is disabled")
+        return
+
+    hookenv.log("Send traps feature is enabled, target address is %s" % send_traps_to)
+
+    if "managementstation" not in contactgroup_members:
+        forced_contactgroup_members.append('managementstation')
+
+    template_values = { 'send_traps_to': send_traps_to }
+
+    with open('hooks/templates/traps.tmpl','r') as f:
+        templateDef = f.read()
+
+    t = Template(templateDef)
+    with open(traps_cfg, 'w') as f:
+        f.write(t.render(template_values))
+
+
+def update_contacts():
+    resulting_members = contactgroup_members
+
+    if forced_contactgroup_members:
+        resulting_members = resulting_members + ',' + ','.join(forced_contactgroup_members)
 
     template_values = {'admin_service_notification_period': hookenv.config('admin_service_notification_period'),
                        'admin_host_notification_period': hookenv.config('admin_host_notification_period'),
@@ -174,7 +212,7 @@ def enable_pagerduty_config():
                        'admin_service_notification_commands': hookenv.config('admin_service_notification_commands'),
                        'admin_host_notification_commands': hookenv.config('admin_host_notification_commands'),
                        'admin_email': hookenv.config('admin_email'),
-                       'contactgroup_members': contactgroup_members}
+                       'contactgroup_members': resulting_members}
 
     with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
         templateDef = f.read()
@@ -294,6 +332,7 @@ def update_config():
 
     with open('hooks/templates/localhost_nagios2.cfg.tmpl', 'r') as f:
         templateDef = f.read()
+
     t = Template(templateDef)
     with open('/etc/nagios3/conf.d/localhost_nagios2.cfg', 'w') as f:
         f.write(t.render(template_values))
@@ -374,11 +413,13 @@ write_extra_config()
 update_config()
 enable_livestatus_config()
 enable_pagerduty_config()
+enable_traps_config()
 if ssl_configured():
     enable_ssl()
 update_apache()
 update_localhost()
 update_cgi_config()
+update_contacts()
 update_password('nagiosro', ro_password)
 if password:
     update_password(nagiosadmin, password)
