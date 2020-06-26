@@ -3,7 +3,6 @@ import socket
 import os
 import os.path
 import re
-import sqlite3
 import shutil
 import tempfile
 
