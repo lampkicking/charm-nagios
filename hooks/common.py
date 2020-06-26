@@ -29,7 +29,7 @@ PLUGIN_PATH = '/usr/lib/nagios/plugins'
 Model.cfg_file = INPROGRESS_CFG
 Model.pynag_directory = INPROGRESS_CONF_D
 
-reduce_RE = re.compile('[\W_]')
+reduce_RE = re.compile(r'[\W_]')
 
 
 def check_ip(n):
@@ -83,7 +83,7 @@ def get_ip_and_hostname(remote_unit, relation_id=None):
         hostname = get_remote_relation_attr(remote_unit, 'private-address', relation_id)
 
     if hostname is None or not len(hostname):
-        print "relation-get failed"
+        log("relation-get failed")
         return 2
     if check_ip(hostname):
         # Some providers don't provide hostnames, so use the remote unit name.
@@ -363,7 +363,7 @@ def _replace_in_config(find_me, replacement):
             for line in cf:
                 new_cf.write(line.replace(find_me, replacement))
             new_cf.flush()
-            os.chmod(new_cf.name, 0644)
+            os.chmod(new_cf.name, 0o644)
             os.unlink(INPROGRESS_CFG)
             os.rename(new_cf.name, INPROGRESS_CFG)
 
@@ -374,7 +374,7 @@ def _commit_in_config(find_me, replacement):
             for line in cf:
                 new_cf.write(line.replace(find_me, replacement))
             new_cf.flush()
-            os.chmod(new_cf.name, 0644)
+            os.chmod(new_cf.name, 0o644)
             os.unlink(MAIN_NAGIOS_CFG)
             os.rename(new_cf.name, MAIN_NAGIOS_CFG)
 
