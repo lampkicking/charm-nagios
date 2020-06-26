@@ -64,7 +64,7 @@ def get_local_ingress_address(binding='website'):
         log('Using primary-addresses')
     except NotImplementedError:
         # pre Juju 2.0
-        hostname = unit_get('private_address')
+        hostname = unit_get('private-address')
         log('Using unit_get private address')
     log(hostname)
     return hostname
