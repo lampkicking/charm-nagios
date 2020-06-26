@@ -42,6 +42,11 @@ def check_ip(n):
         except socket.error:
             return False
 
+def ingress_address(relation_data):
+    if 'ingress-address' in relation_data:
+        return relation_data['ingress-address']
+    return relation_data['private-address']
+
 
 def get_local_ingress_address(binding='website'):
     # using network-get to retrieve the address details if available.
