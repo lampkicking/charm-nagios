@@ -3,7 +3,6 @@ import socket
 import os
 import os.path
 import re
-import sqlite3
 import shutil
 import tempfile
 
@@ -29,7 +28,7 @@ PLUGIN_PATH = '/usr/lib/nagios/plugins'
 Model.cfg_file = INPROGRESS_CFG
 Model.pynag_directory = INPROGRESS_CONF_D
 
-reduce_RE = re.compile('[\W_]')
+reduce_RE = re.compile(r'[\W_]')
 
 
 def check_ip(n):
@@ -42,11 +41,6 @@ def check_ip(n):
             return True
         except socket.error:
             return False
-
-def ingress_address(relation_data):
-    if 'ingress-address' in relation_data:
-        return relation_data['ingress-address']
-    return relation_data['private-address']
 
 
 def get_local_ingress_address(binding='website'):
@@ -69,7 +63,7 @@ def get_local_ingress_address(binding='website'):
         log('Using primary-addresses')
     except NotImplementedError:
         # pre Juju 2.0
-        hostname = unit_get('private_address')
+        hostname = unit_get('private-address')
         log('Using unit_get private address')
     log(hostname)
     return hostname
@@ -88,7 +82,7 @@ def get_ip_and_hostname(remote_unit, relation_id=None):
         hostname = get_remote_relation_attr(remote_unit, 'private-address', relation_id)
 
     if hostname is None or not len(hostname):
-        print "relation-get failed"
+        log("relation-get failed")
         return 2
     if check_ip(hostname):
         # Some providers don't provide hostnames, so use the remote unit name.
@@ -234,6 +228,7 @@ def customize_nrpe(service, name, extra):
     service.set_attribute('check_command', cmd)
     return True
 
+
 def customize_rpc(service, name, extra):
     """ Customize the check_rpc plugin to check things like nfs."""
     plugin = os.path.join(PLUGIN_PATH, 'check_rpc')
@@ -241,9 +236,9 @@ def customize_rpc(service, name, extra):
     # /usr/lib/nagios/plugins/check_rpc -H <host> -C <rpc_command>
     cmd_args = [plugin, '-H', '$HOSTADDRESS$']
     if 'rpc_command' in extra:
-      cmd_args.extend(('-C', extra['rpc_command']))
+        cmd_args.extend(('-C', extra['rpc_command']))
     if 'program_version' in extra:
-      cmd_args.extend(('-c', extra['program_version']))
+        cmd_args.extend(('-c', extra['program_version']))
 
     check_command = _make_check_command(cmd_args)
     cmd = '%s!%s' % (check_command, '!'.join([str(x) for x in args]))
@@ -258,17 +253,17 @@ def customize_tcp(service, name, extra):
     # /usr/lib/nagios/plugins/check_tcp -H <host> -E
     cmd_args = [plugin, '-H', '$HOSTADDRESS$', '-E']
     if 'port' in extra:
-      cmd_args.extend(('-p', extra['port']))
+        cmd_args.extend(('-p', extra['port']))
     if 'string' in extra:
-      cmd_args.extend(('-s', "'{}'".format(extra['string'])))
+        cmd_args.extend(('-s', "'{}'".format(extra['string'])))
     if 'expect' in extra:
-      cmd_args.extend(('-e', extra['expect']))
+        cmd_args.extend(('-e', extra['expect']))
     if 'warning' in extra:
-      cmd_args.extend(('-w', extra['warning']))
+        cmd_args.extend(('-w', extra['warning']))
     if 'critical' in extra:
-      cmd_args.extend(('-c', extra['critical']))
+        cmd_args.extend(('-c', extra['critical']))
     if 'timeout' in extra:
-      cmd_args.extend(('-t', extra['timeout']))
+        cmd_args.extend(('-t', extra['timeout']))
     check_timeout = config('check_timeout')
     if check_timeout is not None:
         cmd_args.extend(('-t', check_timeout))
@@ -287,7 +282,7 @@ def customize_service(service, family, name, extra):
                'tcp': customize_tcp,
                'rpc': customize_rpc,
                'pgsql': customize_pgsql,
-              }
+               }
     if family in customs:
         return customs[family](service, name, extra)
     return False
@@ -301,10 +296,10 @@ def update_localhost():
     hosts = Model.Host.objects.filter(host_name='localhost',
                                       object_type='host')
     for host in hosts:
-        host.icon_image='base/ubuntu.png'
-        host.icon_image_alt='Ubuntu Linux'
-        host.vrml_image='ubuntu.png'
-        host.statusmap_image='base/ubuntu.gd2'
+        host.icon_image = 'base/ubuntu.png'
+        host.icon_image_alt = 'Ubuntu Linux'
+        host.vrml_image = 'ubuntu.png'
+        host.statusmap_image = 'base/ubuntu.gd2'
         host.save()
 
 
@@ -329,7 +324,7 @@ def get_pynag_host(target_id, owner_unit=None, owner_relation=None):
 
 def get_pynag_service(target_id, service_name):
     services = Model.Service.objects.filter(host_name=target_id,
-                    service_description=service_name)
+                                            service_description=service_name)
     if len(services) == 0:
         service = Model.Service()
         service.set_filename(CHARM_CFG)
@@ -349,10 +344,10 @@ def apply_host_policy(target_id, owner_unit, owner_relation):
 
 def get_valid_relations():
     for x in subprocess.Popen(['relation-ids', 'monitors'],
-        stdout=subprocess.PIPE).stdout:
+                              stdout=subprocess.PIPE).stdout:
         yield x.strip()
     for x in subprocess.Popen(['relation-ids', 'nagios'],
-        stdout=subprocess.PIPE).stdout:
+                              stdout=subprocess.PIPE).stdout:
         yield x.strip()
 
 
@@ -368,7 +363,7 @@ def _replace_in_config(find_me, replacement):
             for line in cf:
                 new_cf.write(line.replace(find_me, replacement))
             new_cf.flush()
-            os.chmod(new_cf.name, 0644)
+            os.chmod(new_cf.name, 0o644)
             os.unlink(INPROGRESS_CFG)
             os.rename(new_cf.name, INPROGRESS_CFG)
 
@@ -379,7 +374,7 @@ def _commit_in_config(find_me, replacement):
             for line in cf:
                 new_cf.write(line.replace(find_me, replacement))
             new_cf.flush()
-            os.chmod(new_cf.name, 0644)
+            os.chmod(new_cf.name, 0o644)
             os.unlink(MAIN_NAGIOS_CFG)
             os.rename(new_cf.name, MAIN_NAGIOS_CFG)
 
