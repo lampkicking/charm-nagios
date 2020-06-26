@@ -42,11 +42,6 @@ def check_ip(n):
         except socket.error:
             return False
 
-def ingress_address(relation_data):
-    if 'ingress-address' in relation_data:
-        return relation_data['ingress-address']
-    return relation_data['private-address']
-
 
 def get_local_ingress_address(binding='website'):
     # using network-get to retrieve the address details if available.
@@ -345,21 +340,6 @@ def apply_host_policy(target_id, owner_unit, owner_relation):
     ssh_service = get_pynag_service(target_id, 'SSH')
     ssh_service.set_attribute('check_command', 'check_ssh')
     ssh_service.save()
-
-
-def get_valid_relations():
-    for x in subprocess.Popen(['relation-ids', 'monitors'],
-                              stdout=subprocess.PIPE).stdout:
-        yield x.strip()
-    for x in subprocess.Popen(['relation-ids', 'nagios'],
-                              stdout=subprocess.PIPE).stdout:
-        yield x.strip()
-
-
-def get_valid_units(relation_id):
-    for x in subprocess.Popen(['relation-list', '-r', relation_id],
-                              stdout=subprocess.PIPE).stdout:
-        yield x.strip()
 
 
 def _replace_in_config(find_me, replacement):
