@@ -6,3 +6,5 @@ data/*.pem
 data/*.key
 data/*.crt
 data/*.csr
+.tox/
+.idea/

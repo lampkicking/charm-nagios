@@ -5,6 +5,10 @@ export PYTHONPATH := hooks
 default:
 	echo Nothing to do
 
+lint:
+	@echo "Running flake8"
+	@tox -e lint
+
 # Primitive test runner. Someone please fix this.
 test:
 	tests/00-setup

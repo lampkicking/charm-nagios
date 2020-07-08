@@ -39,7 +39,7 @@ if not os.path.exists(o2.name):
     raise RuntimeError(o2.name)
 
 y.kill_tag('monitors:2')
-y.cleanup_untagged(['monitors:1','monitors:3'])
+y.cleanup_untagged(['monitors:1', 'monitors:3'])
 
 if os.path.exists(o.name):
     raise RuntimeError(o2.name)
