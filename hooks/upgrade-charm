@@ -170,7 +170,6 @@ def enable_pagerduty_config():
         hookenv.log("admin_email is unset, this isn't valid config")
         hookenv.status_set("blocked", "admin_email is not configured")
         exit(0)
-    hookenv.status_set("active", "ready")
     if len(admin_email) == 1:
         hookenv.log("Setting one admin email address '%s'" % admin_email[0])
         contacts = [{
@@ -400,6 +399,7 @@ def update_password(account, password):
                          account])
 
 
+hookenv.status_set("active", "ready")
 warn_legacy_relations()
 write_extra_config()
 update_config()
