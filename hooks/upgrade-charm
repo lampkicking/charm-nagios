@@ -331,6 +331,12 @@ def update_apache():
     with open('hooks/templates/default-ssl.tmpl', 'r') as f:
         templateDef = f.read()
 
+    # Create directory for extra *.include files installed by subordinates
+    try:
+        os.makedirs('/etc/apache2/vhost.d/')
+    except OSError:
+        pass
+
     t = Template(templateDef)
     with open('/etc/apache2/sites-available/default-ssl.conf', 'w') as f:
         f.write(t.render(template_values))
