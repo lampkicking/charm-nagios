@@ -169,7 +169,7 @@ def enable_pagerduty_config():
     if len(admin_email) == 0:
         hookenv.log("admin_email is unset, this isn't valid config")
         hookenv.status_set("blocked", "admin_email is not configured")
-        exit(0)
+        return
     if len(admin_email) == 1:
         hookenv.log("Setting one admin email address '%s'" % admin_email[0])
         contacts = [{
