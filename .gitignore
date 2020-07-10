@@ -7,4 +7,5 @@ data/*.key
 data/*.crt
 data/*.csr
 .tox/
-.idea/
+.idea
+repo-info

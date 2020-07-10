@@ -1,6 +1,12 @@
 #!/usr/bin/make
 PYTHON := /usr/bin/python3
 export PYTHONPATH := hooks
+PROJECTPATH = $(dir $(realpath $(MAKEFILE_LIST)))
+CHARM_NAME = $(notdir $(PROJECTPATH:%/=%))
+ifndef CHARM_BUILD_DIR
+    CHARM_BUILD_DIR := /tmp/$(CHARM_NAME)-builds
+    $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
+endif
 
 default:
 	echo Nothing to do
@@ -8,6 +14,12 @@ default:
 lint:
 	@echo "Running flake8"
 	@tox -e lint
+
+build:
+	@echo "Building charm to base directory $(CHARM_BUILD_DIR)/$(CHARM_NAME)"
+	@-git describe --tags > ./repo-info
+	@mkdir -p $(CHARM_BUILD_DIR)/$(CHARM_NAME)
+	@cp -r * $(CHARM_BUILD_DIR)/$(CHARM_NAME)
 
 # Primitive test runner. Someone please fix this.
 test:
