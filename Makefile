@@ -11,6 +11,8 @@ endif
 default:
 	echo Nothing to do
 
+test: lint unittest functional
+
 lint:
 	@echo "Running flake8"
 	@tox -e lint
@@ -22,16 +24,15 @@ build:
 	@cp -r * $(CHARM_BUILD_DIR)/$(CHARM_NAME)
 
 # Primitive test runner. Someone please fix this.
-test:
-	tests/00-setup
-	tests/100-deploy
-	tests/10-initial-test
-	tests/15-nrpe-test
-	tests/20-ssl-test
-	tests/21-monitors-interface-test
-	tests/22-extraconfig-test
-	tests/23-livestatus-test
-	tests/24-pagerduty-test
+functional: build
+	@PYTEST_KEEP_MODEL=$(PYTEST_KEEP_MODEL) \
+	 PYTEST_CLOUD_NAME=$(PYTEST_CLOUD_NAME) \
+	 PYTEST_CLOUD_REGION=$(PYTEST_CLOUD_REGION) \
+	 tox -e functional
+
+unittest:
+	@tox -e unit
+
 
 bin/charm_helpers_sync.py:
 	@mkdir -p bin

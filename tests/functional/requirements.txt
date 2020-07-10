@@ -1,0 +1,4 @@
+juju
+requests
+pytest
+pytest-asyncio
