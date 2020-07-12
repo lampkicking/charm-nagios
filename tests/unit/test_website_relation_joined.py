@@ -11,7 +11,7 @@ import website_relation_joined
     ('only', 443),
     ('on', 80),
     ('off', 80)
-])
+], ids=['ssl=only', 'ssl=on', 'ssl=off'])
 def test_main(relation_set, config, get_local_ingress_address, ssl):
     get_local_ingress_address.return_value = 'example.com'
     config.return_value = {'ssl': ssl[0]}

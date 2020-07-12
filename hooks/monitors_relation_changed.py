@@ -23,15 +23,14 @@ import yaml
 import json
 import re
 
-
 from common import (customize_service, get_pynag_host,
-        get_pynag_service, refresh_hostgroups,
-        get_valid_relations, get_valid_units,
-        initialize_inprogress_config, flush_inprogress_config,
-        get_local_ingress_address)
+                    get_pynag_service, refresh_hostgroups,
+                    get_valid_relations, get_valid_units,
+                    initialize_inprogress_config, flush_inprogress_config,
+                    get_local_ingress_address)
 
 
-def main(argv):
+def main(argv):  # noqa: C901
     # Note that one can pass in args positionally, 'monitors.yaml targetid
     # and target-address' so the hook can be tested without being in a hook
     # context.
@@ -48,9 +47,9 @@ def main(argv):
             (relname, relnum) = relid.split(':')
             for unit in get_valid_units(relid):
                 relation_settings = json.loads(
-                        subprocess.check_output(['relation-get', '--format=json',
-                            '-r', relid,
-                            '-',unit]).strip())
+                    subprocess.check_output(['relation-get', '--format=json',
+                                             '-r', relid,
+                                             '-', unit]).strip())
 
                 if relation_settings is None or relation_settings == '':
                     continue
@@ -59,14 +58,20 @@ def main(argv):
                     if ('monitors' not in relation_settings
                             or 'target-id' not in relation_settings):
                         continue
-                    if ('target-id' in relation_settings and 'target-address' not in relation_settings):
-                            relation_settings['target-address'] = get_local_ingress_address('monitors')
+                    if (
+                            'target-id' in relation_settings and
+                            'target-address' not in relation_settings):
+                        relation_settings[
+                            'target-address'] = get_local_ingress_address(
+                            'monitors')
 
                 else:
                     # Fake it for the more generic 'nagios' relation'
-                    relation_settings['target-id'] = unit.replace('/','-')
-                    relation_settings['target-address'] = get_local_ingress_address('monitors')
-                    relation_settings['monitors'] = {'monitors': {'remote': {} } }
+                    relation_settings['target-id'] = unit.replace('/', '-')
+                    relation_settings[
+                        'target-address'] = get_local_ingress_address(
+                        'monitors')
+                    relation_settings['monitors'] = {'monitors': {'remote': {}}}
 
                 if relid not in all_relations:
                     all_relations[relid] = {}
@@ -103,21 +108,22 @@ def main(argv):
     os.system('service nagios3 reload')
 
 
-def apply_relation_config(relid, units, all_hosts):
+def apply_relation_config(relid, units, all_hosts):   # noqa: C901
     for unit, relation_settings in units.iteritems():
         monitors = relation_settings['monitors']
         target_id = relation_settings['target-id']
         machine_id = relation_settings.get('machine_id', None)
         parent_host = None
         if machine_id:
-            container_regex = re.compile("(\d*)/lx[cd]/\d*")
+            container_regex = re.compile(r"(\d+)/lx[cd]/\d+")
             if container_regex.search(machine_id):
                 parent_machine = container_regex.search(machine_id).group(1)
                 if parent_machine in all_hosts:
                     parent_host = all_hosts[parent_machine]
 
         # If not set, we don't mess with it, as multiple services may feed
-        # monitors in for a particular address. Generally a primary will set this
+        # monitors in for a particular address. Generally a primary will set
+        # this
         # to its own private-address
         target_address = relation_settings.get('target-address', None)
 

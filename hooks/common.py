@@ -92,7 +92,7 @@ def get_ip_and_hostname(remote_unit, relation_id=None):
     return (ip_address, remote_unit.replace('/', '-'))
 
 
-def refresh_hostgroups():
+def refresh_hostgroups():  # noqa:C901
     """ Not the most efficient thing but since we're only
         parsing what is already on disk here its not too bad """
     hosts = [x['host_name'] for x in Model.Host.objects.all if x['host_name']]
