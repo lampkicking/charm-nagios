@@ -4,8 +4,8 @@
 # of SSL-Everywhere!
 import base64
 from jinja2 import Template
+import glob
 import os
-# import re
 import pwd
 import grp
 import stat
@@ -29,7 +29,7 @@ pagerduty_path = hookenv.config('pagerduty_path')
 notification_levels = hookenv.config('pagerduty_notification_levels')
 nagios_user = hookenv.config('nagios_user')
 nagios_group = hookenv.config('nagios_group')
-ssl_config = hookenv.config('ssl')
+ssl_config = str(hookenv.config('ssl')).lower()
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
 nagios_cfg = "/etc/nagios3/nagios.cfg"
@@ -40,6 +40,8 @@ password = hookenv.config('password')
 ro_password = hookenv.config('ro-password')
 nagiosadmin = hookenv.config('nagiosadmin') or 'nagiosadmin'
 
+SSL_CONFIGURED = ssl_config in ["on", "only"]
+HTTP_ENABLED = ssl_config not in ["only"]
 
 # Checks the charm relations for legacy relations
 # Inserts warnings into the log about legacy relations, as they will be removed
@@ -216,13 +218,6 @@ def enable_pagerduty_config():
     host.service_reload('nagios3')
 
 
-def ssl_configured():
-    allowed_options = ["on", "only"]
-    if str(ssl_config).lower() in allowed_options:
-        return True
-    return False
-
-
 # Gather local facts for SSL deployment
 deploy_key_path = os.path.join(charm_dir, 'data', '%s.key' % (cert_domain))
 deploy_cert_path = os.path.join(charm_dir, 'data', '%s.crt' % (cert_domain))
@@ -345,12 +340,24 @@ def update_cgi_config():
     host.service_reload('apache2')
 
 
-# Nagios3 is deployed as a global apache application from the archive.
-# We'll get a little funky and add the SSL keys to the default-ssl config
-# which sets our keys, including the self-signed ones, as the host keyfiles.
-# note: i tried to use cheetah, and it barfed, several times. It can go play
-# in a fire. I'm jusing jinja2.
 def update_apache():
+    """
+    Nagios3 is deployed as a global apache application from the archive.
+    We'll get a little funky and add the SSL keys to the default-ssl config
+    which sets our keys, including the self-signed ones, as the host keyfiles.
+    """
+
+    # Start by Setting the ports.conf
+
+    with open('hooks/templates/ports-cfg.jinja2', 'r') as f:
+        templateDef = f.read()
+    t = Template(templateDef)
+    ports_conf = '/etc/apache2/ports.conf'
+
+    with open(ports_conf, 'w') as f:
+        f.write(t.render({'enable_http': HTTP_ENABLED}))
+
+    # Next setup the default-ssl.conf
     if os.path.exists(chain_file) and os.path.getsize(chain_file) > 0:
         ssl_chain = chain_file
     else:
@@ -361,31 +368,44 @@ def update_apache():
     with open('hooks/templates/default-ssl.tmpl', 'r') as f:
         templateDef = f.read()
 
+    t = Template(templateDef)
+    ssl_conf = '/etc/apache2/sites-available/default-ssl.conf'
+    with open(ssl_conf, 'w') as f:
+        f.write(t.render(template_values))
+
     # Create directory for extra *.include files installed by subordinates
     try:
         os.makedirs('/etc/apache2/vhost.d/')
     except OSError:
         pass
 
-    t = Template(templateDef)
-    with open('/etc/apache2/sites-available/default-ssl.conf', 'w') as f:
-        f.write(t.render(template_values))
-    print("Value of ssl is %s" % ssl)
-    if ssl_config == "only":
-        subprocess.call(['a2dissite', 'default'])
-        hookenv.close_port(80)
-        subprocess.call(['a2ensite', 'default-ssl'])
-        subprocess.call(['a2enmod', 'ssl'])
-    elif ssl_config == "on":
+    # Configure the behavior of http sites
+    sites = glob.glob("/etc/apache2/sites-available/*.conf")
+    non_ssl = set(sites) - {ssl_conf}
+    for each in non_ssl:
+        site = os.path.basename(each).strip('.conf')
+        if HTTP_ENABLED:
+            # this default vhost config must be disabled
+            hookenv.log("Disabling %s..." % site, "INFO")
+            subprocess.call(['a2dissite', site])
+            hookenv.close_port(80)
+        else:
+            # this default vhost config must be enabled
+            hookenv.log("Enabling %s..." % site, "INFO")
+            subprocess.call(['a2ensite', site])
+            hookenv.open_port(80)
+
+    # Configure the behavior of https site
+    if SSL_CONFIGURED:
+        hookenv.log("Enabling default-ssl...", "INFO")
         subprocess.call(['a2ensite', 'default-ssl'])
         subprocess.call(['a2enmod', 'ssl'])
         hookenv.open_port(443)
     else:
         subprocess.call(['a2dissite', 'default-ssl'])
         hookenv.close_port(443)
-        subprocess.call(['a2ensite', 'default'])
-        hookenv.open_port(80)
 
+    # Finally, restart apache2
     host.service_reload('apache2')
 
 
@@ -411,7 +431,7 @@ write_extra_config()
 update_config()
 enable_livestatus_config()
 enable_pagerduty_config()
-if ssl_configured():
+if SSL_CONFIGURED:
     enable_ssl()
 update_apache()
 update_localhost()
