@@ -2,3 +2,4 @@ juju
 requests
 pytest
 pytest-asyncio
+async_generator
