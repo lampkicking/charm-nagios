@@ -43,7 +43,7 @@ async def model(controller):
     model = await controller.add_model(model_name)
     yield model
     await model.disconnect()
-    if os.getenv('test_preserve_model'):
+    if os.getenv('PYTEST_KEEP_MODEL'):
         return
     await controller.destroy_model(model_name)
     while model_name in await controller.list_models():
@@ -246,28 +246,39 @@ async def deploy_app(relatives, model, series):
             for _ in list(relatives.values()) + [nagios_app]
     ))
     yield nagios_app
+    if os.getenv('PYTEST_KEEP_MODEL'):
+        return
     await nagios_app.destroy()
 
 
 class Agent:
-    def __init__(self, unit):
+    def __init__(self, unit, application):
         self.u = unit
+        self.application = application
         self.model = unit.model
 
     def is_active(self, status):
         u = self.u
         return u.agent_status == status and u.workload_status == "active"
 
-    async def block_until(self, lambda_f, timeout=120, wait_period=5):
-        await self.model.block_until(
-            lambda_f, timeout=timeout, wait_period=wait_period
-        )
+    async def block_until_or_timeout(self, lambda_f, **kwargs):
+        await self.block_until(lambda_f, ignore_timeout=True, **kwargs)
+
+    async def block_until(self, lambda_f, timeout=120, wait_period=5,
+                          ignore_timeout=False):
+        try:
+            await self.model.block_until(
+                lambda_f, timeout=timeout, wait_period=wait_period
+            )
+        except asyncio.TimeoutError:
+            if not ignore_timeout:
+                raise
 
 
 @pytest.fixture()
 async def unit(model, deploy_app):
     """Return the unit we've deployed."""
-    unit = Agent(deploy_app.units[0])
+    unit = Agent(deploy_app.units[0], deploy_app)
     await unit.block_until(lambda: unit.is_active('idle'))
     return unit
 

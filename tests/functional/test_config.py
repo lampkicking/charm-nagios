@@ -1,87 +1,73 @@
+from contextlib import asynccontextmanager
 import pytest
 
 import requests
 pytestmark = pytest.mark.asyncio
 
 
+@asynccontextmanager
+async def config(unit, item, test_value, post_test):
+    await unit.application.set_config({item: test_value})
+    await unit.block_until_or_timeout(lambda: unit.is_active('executing'))
+    await unit.block_until(lambda: unit.is_active('idle'))
+    yield test_value
+    await unit.application.set_config({item: post_test})
+    await unit.block_until_or_timeout(lambda: unit.is_active('executing'))
+    await unit.block_until(lambda: unit.is_active('idle'))
+
+
 @pytest.fixture(params=['on', 'only'])
-async def ssl(model, deploy_app, unit, request):
+async def ssl(unit, request):
     """
     Enable SSL before a test, then disable after test
 
-    :param Model model:             Current deployed model
-    :param Application deploy_app:  Application under test
     :param Agent unit:              unit from the fixture
     :param request:                 test parameters
     """
-    await deploy_app.set_config({'ssl': request.param})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
-    yield request.param
-    await deploy_app.set_config({'ssl': 'off'})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
+    async with config(unit, 'ssl', request.param, 'off') as value:
+        yield value
 
 
 @pytest.fixture
-async def extra_config(model, deploy_app, unit):
+async def extra_config(unit):
     """
     Enable extraconfig for a test, and revert afterwards
 
-    :param Model model:             Current deployed model
-    :param Application deploy_app:  Application under test
     :param Agent unit:              unit from the fixture
     """
-    await deploy_app.set_config({
-        "extraconfig": """
+    new_conf = """
     define host{
       use                     generic-host  ; Name of host template to use
       host_name               extra_config
       alias                   extra_config Host 02
       address                 127.0.0.1
-    }"""})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
-    yield
-    await deploy_app.set_config({"extraconfig": ""})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
+    }"""
+    async with config(unit, "extraconfig", new_conf, ""):
+        yield
 
 
 @pytest.fixture
-async def livestatus_path(model, deploy_app, unit):
+async def livestatus_path(unit):
     """
     Enable livestatus before a test, then disable after test
 
-    :param Model model:             Current deployed model
-    :param Application deploy_app:  Application under test
     :param Agent unit:              unit from the fixture
     """
-    await deploy_app.set_config({"enable_livestatus": "true"})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
-    yield (await deploy_app.get_config())['livestatus_path']['value']
-    await deploy_app.set_config({"enable_livestatus": "false"})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
+    async with config(unit, "enable_livestatus", "true", "false"):
+        app_config = await unit.application.get_config()
+        yield app_config['livestatus_path']['value']
 
 
 @pytest.fixture()
-async def enable_pagerduty(model, deploy_app, unit):
+async def enable_pagerduty(unit):
     """
     Enable enable_pagerduty before first test, then disable after last test
 
-    :param Model model:             Current deployed model
-    :param Application deploy_app:  Application under test
     :param Agent unit:              unit from the fixture
     """
-    await deploy_app.set_config({"enable_pagerduty": "true"})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
-    yield (await deploy_app.get_config())['pagerduty_path']['value']
-    await deploy_app.set_config({"enable_pagerduty": "false"})
-    await unit.block_until(lambda: unit.is_active('executing'))
-    await unit.block_until(lambda: unit.is_active('idle'))
+    async with config(unit, "enable_pagerduty", "true", "false"):
+        app_config = await unit.application.get_config()
+        yield app_config['pagerduty_path']['value']
 
 
 #########
