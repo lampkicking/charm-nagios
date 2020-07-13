@@ -16,7 +16,7 @@ import pytest
 STAT_FILE = "python3 -c \"import json; import os; s=os.stat('%s'); print(json.dumps({'uid': s.st_uid, 'gid': s.st_gid, 'mode': oct(s.st_mode), 'size': s.st_size}))\""  # noqa: E501
 
 
-@pytest.yield_fixture(scope='module')
+@pytest.yield_fixture(scope='session')
 def event_loop(request):
     """Override the default pytest event loop to allow for broaded scopedv fixtures."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -27,7 +27,7 @@ def event_loop(request):
     asyncio.set_event_loop(None)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 async def controller():
     """Connect to the current controller."""
     controller = Controller()
@@ -36,7 +36,7 @@ async def controller():
     await controller.disconnect()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 async def model(controller):
     """Create a model that lives only for the duration of the test."""
     model_name = "functest-{}".format(uuid.uuid4())
@@ -50,7 +50,7 @@ async def model(controller):
         await asyncio.sleep(1)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 async def current_model():
     """Return the current model, does not create or destroy it."""
     model = Model()
@@ -167,3 +167,113 @@ async def create_group(run_command):
         cmd = "sudo groupadd %s" % group_name
         await run_command(cmd, target)
     return _create_group
+
+
+pytestmark = pytest.mark.asyncio
+
+CHARM_BUILD_DIR = os.getenv("CHARM_BUILD_DIR", "..").rstrip("/")
+
+SERIES = [
+    "trusty",
+    "xenial",
+    "bionic",
+]
+
+
+############
+# FIXTURES #
+############
+@pytest.fixture(scope='session', params=SERIES)
+def series(request):
+    """Return ubuntu version (i.e. xenial) in use in the test."""
+    return request.param
+
+
+@pytest.fixture(scope='session')
+async def relatives(model):
+    nrpe = "nrpe"
+    nrpe_app = await model.deploy(
+        'cs:' + nrpe, application_name=nrpe,
+        series='trusty', config={},
+        num_units=0
+    )
+
+    mysql = "mysql"
+    mysql_app = await model.deploy(
+        'cs:' + mysql, application_name=mysql,
+        series='trusty', config={}
+    )
+
+    mediawiki = "mediawiki"
+    mediawiki_app = await model.deploy(
+        'cs:' + mediawiki, application_name=mediawiki,
+        series='trusty', config={}
+    )
+
+    await model.add_relation('mysql:db', 'mediawiki:db')
+    await model.add_relation('mysql:juju-info', 'nrpe:general-info')
+    await model.add_relation('mediawiki:juju-info', 'nrpe:general-info')
+    await model.block_until(
+        lambda: all(_.status == "active" for _ in (mysql_app, mediawiki_app))
+    )
+
+    yield {mediawiki: mediawiki_app, mysql: mysql_app, nrpe: nrpe_app}
+
+
+@pytest.fixture(scope='session')
+async def deploy_app(relatives, model, series):
+    """Return application of the charm under test."""
+    app_name = "nagios-{}".format(series)
+
+    """Deploy the nagios app."""
+    nagios_app = await model.deploy(
+        os.path.join(CHARM_BUILD_DIR, 'nagios'),
+        application_name=app_name,
+        series=series,
+        config={
+            'enable_livestatus': False,
+            'ssl': False,
+            'extraconfig': '',
+            'enable_pagerduty': False
+        }
+    )
+    await model.add_relation('{}:monitors'.format(app_name), 'mysql:monitors')
+    await model.add_relation('{}:nagios'.format(app_name), 'mediawiki:juju-info')
+    await model.add_relation('nrpe:monitors', '{}:monitors'.format(app_name))
+    await model.block_until(lambda: nagios_app.status == "active")
+    await model.block_until(lambda: all(
+            _.status == "active"
+            for _ in list(relatives.values()) + [nagios_app]
+    ))
+    yield nagios_app
+    await nagios_app.destroy()
+
+
+class Agent:
+    def __init__(self, unit):
+        self.u = unit
+        self.model = unit.model
+
+    def is_active(self, status):
+        u = self.u
+        return u.agent_status == status and u.workload_status == "active"
+
+    async def block_until(self, lambda_f, timeout=120, wait_period=5):
+        await self.model.block_until(
+            lambda_f, timeout=timeout, wait_period=wait_period
+        )
+
+
+@pytest.fixture()
+async def unit(model, deploy_app):
+    """Return the unit we've deployed."""
+    unit = Agent(deploy_app.units[0])
+    await unit.block_until(lambda: unit.is_active('idle'))
+    return unit
+
+
+@pytest.fixture()
+async def auth(file_contents, unit):
+    """Return the basic auth credentials."""
+    nagiospwd = await file_contents("/var/lib/juju/nagios.passwd", unit.u)
+    return 'nagiosadmin', nagiospwd.strip()
