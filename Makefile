@@ -3,7 +3,7 @@ PYTHON := /usr/bin/python3
 export PYTHONPATH := hooks
 PROJECTPATH = $(dir $(realpath $(MAKEFILE_LIST)))
 METADATA_FILE = "metadata.yaml"
-CHARM_NAME = $(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $2}')
+CHARM_NAME = $(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $$2}')
 ifndef CHARM_BUILD_DIR
     CHARM_BUILD_DIR := /tmp/charm-builds
     $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
@@ -46,7 +46,7 @@ clean:
 	@echo "Cleaning files"
 	@if [ -d .tox ] ; then rm -r .tox ; fi
 	@if [ -d .pytest_cache ] ; then rm -r .pytest_cache ; fi
-	@find . | grep -E "\(__pycache__|\.pyc|\.pyo$\)" | xargs rm -rf
+	@find . | grep -E "\(__pycache__|\.pyc|\.pyo$$\)" | xargs rm -rf
 	@rm -rf $(CHARM_BUILD_DIR)/$(CHARM_NAME)/*
 
 

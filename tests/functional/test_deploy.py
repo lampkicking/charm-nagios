@@ -167,11 +167,8 @@ async def ssl(model, deploy_app, unit, request):
 async def test_web_interface_with_ssl(auth, unit, ssl):
     http_url = "http://%s/nagios3/" % unit.u.public_address
     if ssl == 'only':
-        """ SSL ONLY should prevent http nagios -- but must be a race in 
-            my test conditions
         with pytest.raises(requests.ConnectionError):
             requests.get(http_url, auth=auth)
-        """
     else:
         r = requests.get(http_url, auth=auth)
         assert r.status_code == 200, "HTTP Admin login failed"
