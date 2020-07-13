@@ -43,10 +43,13 @@ nagiosadmin = hookenv.config('nagiosadmin') or 'nagiosadmin'
 SSL_CONFIGURED = ssl_config in ["on", "only"]
 HTTP_ENABLED = ssl_config not in ["only"]
 
-# Checks the charm relations for legacy relations
-# Inserts warnings into the log about legacy relations, as they will be removed
-# in the future
+
 def warn_legacy_relations():
+    """
+    Checks the charm relations for legacy relations
+    Inserts warnings into the log about legacy relations, as they will be removed
+    in the future
+    """
     if legacy_relations is not None:
         hookenv.log("Relations have been radically changed."
                     " The monitoring interface is not supported anymore.",

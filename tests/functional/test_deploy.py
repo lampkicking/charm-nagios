@@ -176,6 +176,3 @@ async def test_web_interface_with_ssl(auth, unit, ssl):
     https_url = "https://%s/nagios3/" % unit.u.public_address
     r = requests.get(https_url, auth=auth, verify=False)
     assert r.status_code == 200, "HTTPs Admin login failed"
-
-
-
