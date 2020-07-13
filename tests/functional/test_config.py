@@ -7,11 +7,15 @@ pytestmark = pytest.mark.asyncio
 @asynccontextmanager
 async def config(unit, item, test_value, post_test):
     await unit.application.set_config({item: test_value})
-    await unit.block_until_or_timeout(lambda: unit.is_active('executing'))
+    await unit.block_until_or_timeout(
+        lambda: unit.is_active('executing'), timeout=5,
+    )
     await unit.block_until(lambda: unit.is_active('idle'))
     yield test_value
     await unit.application.set_config({item: post_test})
-    await unit.block_until_or_timeout(lambda: unit.is_active('executing'))
+    await unit.block_until_or_timeout(
+        lambda: unit.is_active('executing'), timeout=5,
+    )
     await unit.block_until(lambda: unit.is_active('idle'))
 
 
