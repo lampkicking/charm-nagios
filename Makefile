@@ -2,16 +2,18 @@
 PYTHON := /usr/bin/python3
 export PYTHONPATH := hooks
 PROJECTPATH = $(dir $(realpath $(MAKEFILE_LIST)))
-CHARM_NAME = $(notdir $(PROJECTPATH:%/=%))
+METADATA_FILE = "metadata.yaml"
+CHARM_NAME = $(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $2}')
 ifndef CHARM_BUILD_DIR
-    CHARM_BUILD_DIR := /tmp/$(CHARM_NAME)-builds
+    CHARM_BUILD_DIR := /tmp/charm-builds
     $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
 endif
 
 default:
 	echo Nothing to do
 
-test: lint unittest functional
+test: lint proof unittest functional
+	@echo "Testing charm $(CHARM_NAME)"
 
 lint:
 	@echo "Running flake8"
@@ -25,13 +27,27 @@ build:
 
 # Primitive test runner. Someone please fix this.
 functional: build
-	@PYTEST_KEEP_MODEL=$(PYTEST_KEEP_MODEL) \
+	@echo Executing functional tests in $(CHARM_BUILD_DIR)
+	@CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) \
+     PYTEST_KEEP_MODEL=$(PYTEST_KEEP_MODEL) \
 	 PYTEST_CLOUD_NAME=$(PYTEST_CLOUD_NAME) \
 	 PYTEST_CLOUD_REGION=$(PYTEST_CLOUD_REGION) \
 	 tox -e functional
 
 unittest:
+	@echo "Running unit tests"
 	@tox -e unit
+
+proof:
+	@echo "Running charm proof"
+	@charm proof
+
+clean:
+	@echo "Cleaning files"
+	@if [ -d .tox ] ; then rm -r .tox ; fi
+	@if [ -d .pytest_cache ] ; then rm -r .pytest_cache ; fi
+	@find . | grep -E "\(__pycache__|\.pyc|\.pyo$\)" | xargs rm -rf
+	@rm -rf $(CHARM_BUILD_DIR)/$(CHARM_NAME)/*
 
 
 bin/charm_helpers_sync.py:
