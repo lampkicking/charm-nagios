@@ -37,4 +37,3 @@ async def test_nrpe_monitors_config(relatives, unit, file_contents):
             mysql_unit
         )
     assert contents, "disk root check config not found."
-
