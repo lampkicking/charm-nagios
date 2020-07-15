@@ -95,7 +95,7 @@ def _collect_relation_data():
     return all_relations
 
 
-def main(argv):
+def main(argv):  # noqa: C901
     # Note that one can pass in args positionally, 'monitors.yaml targetid
     # and target-address' so the hook can be tested without being in a hook
     # context.
