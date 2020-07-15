@@ -387,29 +387,43 @@ def update_apache():
     non_ssl = set(sites) - {ssl_conf}
     for each in non_ssl:
         site = os.path.basename(each).strip('.conf')
-        if HTTP_ENABLED:
-            # this default vhost config must be disabled
-            hookenv.log("Disabling %s..." % site, "INFO")
-            subprocess.call(['a2dissite', site])
-            hookenv.close_port(80)
-        else:
-            # this default vhost config must be enabled
-            hookenv.log("Enabling %s..." % site, "INFO")
-            subprocess.call(['a2ensite', site])
-            hookenv.open_port(80)
+        Apache2Site(site).action(enabled=HTTP_ENABLED)
 
     # Configure the behavior of https site
-    if SSL_CONFIGURED:
-        hookenv.log("Enabling default-ssl...", "INFO")
-        subprocess.call(['a2ensite', 'default-ssl'])
-        subprocess.call(['a2enmod', 'ssl'])
-        hookenv.open_port(443)
-    else:
-        subprocess.call(['a2dissite', 'default-ssl'])
-        hookenv.close_port(443)
+    Apache2Site("default-ssl").action(enabled=SSL_CONFIGURED)
 
     # Finally, restart apache2
     host.service_reload('apache2')
+
+
+class Apache2Site:
+    def __init__(self, site):
+        self.site = site
+        self.is_ssl = 'ssl' in site.lower()
+        self.port = 443 if self.is_ssl else 80
+
+    def action(self, enabled):
+        fn = self._enable if enabled else self._disable
+        return fn()
+
+    def _call(self, args):
+        try:
+            subprocess.check_output(args, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            hookenv.log("Apache2Site: `{}`, returned {}, stdout:\n{}"
+                        .format(e.cmd, e.returncode, e.output), "ERROR")
+
+    def _enable(self):
+        hookenv.log("Apache2Site: Enabling %s..." % self.site, "INFO")
+        self._call(['a2ensite', self.site])
+        if self.port == 443:
+            self._call(['a2enmod', 'ssl'])
+        hookenv.open_port(self.port)
+
+    def _disable(self):
+        hookenv.log("Apache2Site: Disabling %s..." % self.site, "INFO")
+        self._call(['a2dissite', self.site])
+        hookenv.close_port(self.port)
 
 
 def update_password(account, password):
