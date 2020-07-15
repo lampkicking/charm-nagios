@@ -18,19 +18,84 @@
 
 import sys
 import os
-import subprocess
 import yaml
-import json
 import re
+from collections import defaultdict
 
-from common import (customize_service, get_pynag_host,
-                    get_pynag_service, refresh_hostgroups,
-                    get_valid_relations, get_valid_units,
-                    initialize_inprogress_config, flush_inprogress_config,
-                    get_local_ingress_address)
+from charmhelpers.core.hookenv import (
+    relation_get,
+    ingress_address,
+    related_units,
+    relation_ids,
+    log,
+    DEBUG
+)
+
+from common import (
+    customize_service,
+    get_pynag_host,
+    get_pynag_service,
+    refresh_hostgroups,
+    initialize_inprogress_config,
+    flush_inprogress_config
+)
 
 
-def main(argv):  # noqa: C901
+REQUIRED_REL_DATA_KEYS = [
+    'target-address',
+    'monitors',
+    'target-id',
+]
+
+
+def _prepare_relation_data(unit, rid):
+    relation_data = relation_get(unit=unit, rid=rid)
+
+    if not relation_data:
+        msg = (
+            'no relation data found for unit {} in relation {} - '
+            'skipping'.format(unit, rid)
+        )
+        log(msg, level=DEBUG)
+        return {}
+
+    if rid.split(':')[0] == 'nagios':
+        # Fake it for the more generic 'nagios' relation
+        relation_data['target-id'] = unit.replace('/', '-')
+        relation_data['monitors'] = {'monitors': {'remote': {}}}
+
+    if not relation_data.get('target-address'):
+        relation_data['target-address'] = ingress_address(unit=unit, rid=rid)
+
+    for key in REQUIRED_REL_DATA_KEYS:
+        if not relation_data.get(key):
+            # Note: it seems that some applications don't provide monitors over
+            # the relation at first (e.g. gnocchi). After a few hook runs,
+            # though, they add the key. For this reason I think using a logging
+            # level higher than DEBUG could be misleading
+            msg = (
+                '{} not found for unit {} in relation {} - '
+                'skipping'.format(key, unit, rid)
+            )
+            log(msg, level=DEBUG)
+            return {}
+
+    return relation_data
+
+
+def _collect_relation_data():
+    all_relations = defaultdict(dict)
+    for relname in ['nagios', 'monitors']:
+        for relid in relation_ids(relname):
+            for unit in related_units(relid):
+                relation_data = _prepare_relation_data(unit=unit, rid=relid)
+                if relation_data:
+                    all_relations[relid][unit] = relation_data
+
+    return all_relations
+
+
+def main(argv):
     # Note that one can pass in args positionally, 'monitors.yaml targetid
     # and target-address' so the hook can be tested without being in a hook
     # context.
@@ -42,41 +107,7 @@ def main(argv):  # noqa: C901
             relation_settings['target-address'] = argv[3]
         all_relations = {'monitors:99': {'testing/0': relation_settings}}
     else:
-        all_relations = {}
-        for relid in get_valid_relations():
-            (relname, relnum) = relid.split(':')
-            for unit in get_valid_units(relid):
-                relation_settings = json.loads(
-                    subprocess.check_output(['relation-get', '--format=json',
-                                             '-r', relid,
-                                             '-', unit]).strip())
-
-                if relation_settings is None or relation_settings == '':
-                    continue
-
-                if relname == 'monitors':
-                    if ('monitors' not in relation_settings
-                            or 'target-id' not in relation_settings):
-                        continue
-                    if (
-                            'target-id' in relation_settings and
-                            'target-address' not in relation_settings):
-                        relation_settings[
-                            'target-address'] = get_local_ingress_address(
-                            'monitors')
-
-                else:
-                    # Fake it for the more generic 'nagios' relation'
-                    relation_settings['target-id'] = unit.replace('/', '-')
-                    relation_settings[
-                        'target-address'] = get_local_ingress_address(
-                        'monitors')
-                    relation_settings['monitors'] = {'monitors': {'remote': {}}}
-
-                if relid not in all_relations:
-                    all_relations[relid] = {}
-
-                all_relations[relid][unit] = relation_settings
+        all_relations = _collect_relation_data()
 
     # Hack to work around http://pad.lv/1025478
     targets_with_addresses = set()
@@ -123,8 +154,7 @@ def apply_relation_config(relid, units, all_hosts):   # noqa: C901
 
         # If not set, we don't mess with it, as multiple services may feed
         # monitors in for a particular address. Generally a primary will set
-        # this
-        # to its own private-address
+        # this to its own private-address
         target_address = relation_settings.get('target-address', None)
 
         if type(monitors) != dict:
