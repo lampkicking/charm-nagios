@@ -29,7 +29,7 @@ echo nagios3-cgi nagios3/adminpassword password $PASSWORD | debconf-set-selectio
 echo nagios3-cgi nagios3/adminpassword-repeat password $PASSWORD | debconf-set-selections
 
 DEBIAN_FRONTEND=noninteractive apt-get -qy \
-  install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin pynag python-apt python-yaml
+  install nagios3 nagios-plugins python-cheetah python-jinja2 dnsutils debconf-utils nagios-nrpe-plugin pynag python-apt python-yaml python-enum34
 
 scripts/postfix_loopback_only.sh
 
