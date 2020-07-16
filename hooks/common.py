@@ -342,21 +342,6 @@ def apply_host_policy(target_id, owner_unit, owner_relation):
     ssh_service.save()
 
 
-def get_valid_relations():
-    for x in subprocess.Popen(['relation-ids', 'monitors'],
-                              stdout=subprocess.PIPE).stdout:
-        yield x.strip()
-    for x in subprocess.Popen(['relation-ids', 'nagios'],
-                              stdout=subprocess.PIPE).stdout:
-        yield x.strip()
-
-
-def get_valid_units(relation_id):
-    for x in subprocess.Popen(['relation-list', '-r', relation_id],
-                              stdout=subprocess.PIPE).stdout:
-        yield x.strip()
-
-
 def _replace_in_config(find_me, replacement):
     with open(INPROGRESS_CFG) as cf:
         with tempfile.NamedTemporaryFile(dir=INPROGRESS_DIR, delete=False) as new_cf:
