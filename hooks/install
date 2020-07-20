@@ -67,6 +67,15 @@ dpkg-statoverride --update --add nagios www-data 2710 /var/lib/nagios3/rw || :
 dpkg-statoverride --update --add nagios nagios 751 /var/lib/nagios3 || :
 service nagios3 start
 
+# install files needed for sending snmp traps functionality
+cp -v $CHARM_DIR/files/mibs/NAGIOS-NOTIFY-MIB /usr/share/snmp/mibs/
+cp -v $CHARM_DIR/files/mibs/NAGIOS-ROOT-MIB /usr/share/snmp/mibs/
+cp -v $CHARM_DIR/files/mibs/SNMPv2-MIB.txt /usr/share/snmp/mibs/
+cp -v $CHARM_DIR/files/mibs/SNMPv2-SMI.txt /usr/share/snmp/mibs/
+cp -v $CHARM_DIR/files/mibs/SNMPv2-TC.txt /usr/share/snmp/mibs/
+cp -v $CHARM_DIR/files/send-host-trap /usr/local/bin/
+cp -v $CHARM_DIR/files/send-service-trap /usr/local/bin/
+
 # For the admin interface
 open-port 80
 
