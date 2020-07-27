@@ -25,13 +25,12 @@ async def test_hosts_being_monitored(auth, unit):
     host_url = ("http://%s/cgi-bin/nagios3/status.cgi?"
                 "hostgroup=all&style=hostdetail") % unit.u.public_address
     r = requests.get(host_url, auth=auth)
-    assert r.text.find('mysql') and r.text.find('mediawiki'), \
-        "Nagios is not monitoring the hosts it supposed to."
+    assert r.text.find('mysql'), "Nagios is not monitoring the hosts it supposed to."
 
 
 async def test_nrpe_monitors_config(relatives, unit, file_contents):
     # look for disk root check in nrpe config
-    mysql_unit = relatives['mysql'].units[0]
+    mysql_unit = relatives['mysql']['app'].units[0]
     contents = await file_contents(
             '/etc/nagios/nrpe.d/check_disk_root.cfg',
             mysql_unit

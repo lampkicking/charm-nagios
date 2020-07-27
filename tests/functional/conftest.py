@@ -12,7 +12,6 @@ from juju.model import Model
 
 import pytest
 
-
 STAT_FILE = "python3 -c \"import json; import os; s=os.stat('%s'); print(json.dumps({'uid': s.st_uid, 'gid': s.st_gid, 'mode': oct(s.st_mode), 'size': s.st_size}))\""  # noqa: E501
 
 
@@ -62,29 +61,34 @@ async def current_model():
 @pytest.fixture
 async def get_app(model):
     """Return the application requested."""
+
     async def _get_app(name):
         try:
             return model.applications[name]
         except KeyError:
             raise JujuError("Cannot find application {}".format(name))
+
     return _get_app
 
 
 @pytest.fixture
 async def get_unit(model):
     """Return the requested <app_name>/<unit_number> unit."""
+
     async def _get_unit(name):
         try:
             (app_name, unit_number) = name.split('/')
             return model.applications[app_name].units[unit_number]
         except (KeyError, ValueError):
             raise JujuError("Cannot find unit {}".format(name))
+
     return _get_unit
 
 
 @pytest.fixture
 async def get_entity(model, get_unit, get_app):
     """Return a unit or an application."""
+
     async def _get_entity(name):
         try:
             return await get_unit(name)
@@ -93,6 +97,7 @@ async def get_entity(model, get_unit, get_app):
                 return await get_app(name)
             except JujuError:
                 raise JujuError("Cannot find entity {}".format(name))
+
     return _get_entity
 
 
@@ -104,6 +109,7 @@ async def run_command(get_unit):
     :param cmd: Command to be run
     :param target: Unit object or unit name string
     """
+
     async def _run_command(cmd, target):
         unit = (
             target
@@ -112,6 +118,7 @@ async def run_command(get_unit):
         )
         action = await unit.run(cmd)
         return action.results
+
     return _run_command
 
 
@@ -123,10 +130,12 @@ async def file_stat(run_command):
     :param path: File path
     :param target: Unit object or unit name string
     """
+
     async def _file_stat(path, target):
         cmd = STAT_FILE % path
         results = await run_command(cmd, target)
         return json.loads(results['Stdout'])
+
     return _file_stat
 
 
@@ -138,16 +147,19 @@ async def file_contents(run_command):
     :param path: File path
     :param target: Unit object or unit name string
     """
+
     async def _file_contents(path, target):
         cmd = 'cat {}'.format(path)
         results = await run_command(cmd, target)
         return results['Stdout']
+
     return _file_contents
 
 
 @pytest.fixture
 async def reconfigure_app(get_app, model):
     """Apply a different config to the requested app."""
+
     async def _reconfigure_app(cfg, target):
         application = (
             target
@@ -157,15 +169,18 @@ async def reconfigure_app(get_app, model):
         await application.set_config(cfg)
         await application.get_config()
         await model.block_until(lambda: application.status == 'active')
+
     return _reconfigure_app
 
 
 @pytest.fixture
 async def create_group(run_command):
     """Create the UNIX group specified."""
+
     async def _create_group(group_name, target):
         cmd = "sudo groupadd %s" % group_name
         await run_command(cmd, target)
+
     return _create_group
 
 
@@ -190,34 +205,35 @@ def series(request):
 
 
 @pytest.fixture(scope='session')
-async def relatives(model):
+async def relatives(model, series):
     nrpe = "nrpe"
+    nrpe_name = "nrpe-{}".format(series)
     nrpe_app = await model.deploy(
-        'cs:' + nrpe, application_name=nrpe,
-        series='trusty', config={},
+        'cs:' + nrpe, application_name=nrpe_name,
+        series=series, config={},
         num_units=0
     )
 
     mysql = "mysql"
+    if series != "trusty":
+        mysql = "percona-cluster"
+
+    mysql_name = "mysql-{}".format(series)
     mysql_app = await model.deploy(
-        'cs:' + mysql, application_name=mysql,
-        series='trusty', config={}
+        'cs:' + mysql, application_name=mysql_name,
+        series=series, config={}
     )
 
-    mediawiki = "mediawiki"
-    mediawiki_app = await model.deploy(
-        'cs:' + mediawiki, application_name=mediawiki,
-        series='trusty', config={}
-    )
-
-    await model.add_relation('mysql:db', 'mediawiki:db')
-    await model.add_relation('mysql:juju-info', 'nrpe:general-info')
-    await model.add_relation('mediawiki:juju-info', 'nrpe:general-info')
+    await model.add_relation('{}:nrpe-external-master'.format(mysql_name),
+                             '{}:nrpe-external-master'.format(nrpe_name))
     await model.block_until(
-        lambda: all(_.status == "active" for _ in (mysql_app, mediawiki_app))
+        lambda: all(_.status == "active" for _ in [mysql_app])
     )
 
-    yield {mediawiki: mediawiki_app, mysql: mysql_app, nrpe: nrpe_app}
+    yield {
+        "mysql": {"name": mysql_name, "app": mysql_app},
+        "nrpe": {"name": nrpe_name, "app": nrpe_app}
+    }
 
 
 @pytest.fixture(scope='session')
@@ -232,22 +248,27 @@ async def deploy_app(relatives, model, series):
         series=series,
         config={
             'enable_livestatus': False,
-            'ssl': False,
+            'ssl': 'off',
             'extraconfig': '',
             'enable_pagerduty': False
         }
     )
-    await model.add_relation('{}:monitors'.format(app_name), 'mysql:monitors')
-    await model.add_relation('{}:nagios'.format(app_name), 'mediawiki:juju-info')
-    await model.add_relation('nrpe:monitors', '{}:monitors'.format(app_name))
-    await model.block_until(lambda: nagios_app.status == "active")
-    await model.block_until(lambda: all(
-            _.status == "active"
-            for _ in list(relatives.values()) + [nagios_app]
-    ))
+    await model.add_relation('{}:nrpe-external-master'.format(app_name),
+                             '{}:nrpe-external-master'.format(relatives["mysql"]["name"]))
+    await model.add_relation('{}:monitors'.format(relatives["nrpe"]["name"]),
+                             '{}:monitors'.format(app_name))
+    await model.block_until(
+        lambda: nagios_app.units[0].agent_status == "idle" and
+                relatives["mysql"]["app"].units[0].agent_status == "idle"
+    )
+
     yield nagios_app
     if os.getenv('PYTEST_KEEP_MODEL'):
         return
+
+    for relative in list(relatives.values()):
+        app = relative["app"]
+        await app.destroy()
     await nagios_app.destroy()
 
 
