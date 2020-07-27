@@ -4,6 +4,7 @@
 # of SSL-Everywhere!
 import base64
 from jinja2 import Template
+import glob
 import os
 # import re
 import pwd
@@ -30,7 +31,7 @@ pagerduty_path = hookenv.config('pagerduty_path')
 notification_levels = hookenv.config('pagerduty_notification_levels')
 nagios_user = hookenv.config('nagios_user')
 nagios_group = hookenv.config('nagios_group')
-ssl_config = hookenv.config('ssl')
+ssl_config = str(hookenv.config('ssl')).lower()
 charm_dir = os.environ['CHARM_DIR']
 cert_domain = hookenv.unit_get('public-address')
 nagios_cfg = "/etc/nagios3/nagios.cfg"
@@ -47,10 +48,19 @@ contactgroup_members = hookenv.config("contactgroup-members")
 # it will be changed by functions
 forced_contactgroup_members = []
 
+HTTP_ENABLED = ssl_config not in ["only"]
+SSL_CONFIGURED = ssl_config in ["on", "only"]
+
+
 # Checks the charm relations for legacy relations
 # Inserts warnings into the log about legacy relations, as they will be removed
 # in the future
 def warn_legacy_relations():
+    """Checks the charm relations for legacy relations.
+
+    Inserts warnings into the log about legacy relations, as they will be removed
+    in the future
+    """
     if legacy_relations is not None:
         hookenv.log("Relations have been radically changed."
                     " The monitoring interface is not supported anymore.",
@@ -442,6 +452,23 @@ def update_cgi_config():
 # note: i tried to use cheetah, and it barfed, several times. It can go play
 # in a fire. I'm jusing jinja2.
 def update_apache():
+    """
+    Nagios3 is deployed as a global apache application from the archive.
+    We'll get a little funky and add the SSL keys to the default-ssl config
+    which sets our keys, including the self-signed ones, as the host keyfiles.
+    """
+
+    # Start by Setting the ports.conf
+
+    with open('hooks/templates/ports-cfg.jinja2', 'r') as f:
+        templateDef = f.read()
+    t = Template(templateDef)
+    ports_conf = '/etc/apache2/ports.conf'
+
+    with open(ports_conf, 'w') as f:
+        f.write(t.render({'enable_http': HTTP_ENABLED}))
+
+    # Next setup the default-ssl.conf
     if os.path.exists(chain_file) and os.path.getsize(chain_file) > 0:
         ssl_chain = chain_file
     else:
@@ -453,25 +480,58 @@ def update_apache():
         templateDef = f.read()
 
     t = Template(templateDef)
-    with open('/etc/apache2/sites-available/default-ssl.conf', 'w') as f:
+    ssl_conf = '/etc/apache2/sites-available/default-ssl.conf'
+    with open(ssl_conf, 'w') as f:
         f.write(t.render(template_values))
-    print("Value of ssl is %s" % ssl)
-    if ssl_config == "only":
-        subprocess.call(['a2dissite', 'default'])
-        hookenv.close_port(80)
-        subprocess.call(['a2ensite', 'default-ssl'])
-        subprocess.call(['a2enmod', 'ssl'])
-    elif ssl_config == "on":
-        subprocess.call(['a2ensite', 'default-ssl'])
-        subprocess.call(['a2enmod', 'ssl'])
-        hookenv.open_port(443)
-    else:
-        subprocess.call(['a2dissite', 'default-ssl'])
-        hookenv.close_port(443)
-        subprocess.call(['a2ensite', 'default'])
-        hookenv.open_port(80)
 
+    # Create directory for extra *.include files installed by subordinates
+    try:
+        os.makedirs('/etc/apache2/vhost.d/')
+    except OSError:
+        pass
+
+    # Configure the behavior of http sites
+    sites = glob.glob("/etc/apache2/sites-available/*.conf")
+    non_ssl = set(sites) - {ssl_conf}
+    for each in non_ssl:
+        site = os.path.basename(each).strip('.conf')
+        Apache2Site(site).action(enabled=HTTP_ENABLED)
+
+    # Configure the behavior of https site
+    Apache2Site("default-ssl").action(enabled=SSL_CONFIGURED)
+
+    # Finally, restart apache2
     host.service_reload('apache2')
+
+
+class Apache2Site:
+    def __init__(self, site):
+        self.site = site
+        self.is_ssl = 'ssl' in site.lower()
+        self.port = 443 if self.is_ssl else 80
+
+    def action(self, enabled):
+        fn = self._enable if enabled else self._disable
+        return fn()
+
+    def _call(self, args):
+        try:
+            subprocess.check_output(args, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            hookenv.log("Apache2Site: `{}`, returned {}, stdout:\n{}"
+                        .format(e.cmd, e.returncode, e.output), "ERROR")
+
+    def _enable(self):
+        hookenv.log("Apache2Site: Enabling %s..." % self.site, "INFO")
+        self._call(['a2ensite', self.site])
+        if self.port == 443:
+            self._call(['a2enmod', 'ssl'])
+        hookenv.open_port(self.port)
+
+    def _disable(self):
+        hookenv.log("Apache2Site: Disabling %s..." % self.site, "INFO")
+        self._call(['a2dissite', self.site])
+        hookenv.close_port(self.port)
 
 
 def update_password(account, password):

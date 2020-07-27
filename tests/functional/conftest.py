@@ -227,7 +227,8 @@ async def relatives(model, series):
     await model.add_relation('{}:nrpe-external-master'.format(mysql_name),
                              '{}:nrpe-external-master'.format(nrpe_name))
     await model.block_until(
-        lambda: all(_.status == "active" for _ in [mysql_app])
+        lambda: mysql_app.units[0].workload_status == "active" and
+        mysql_app.units[0].agent_status == "idle"
     )
 
     yield {
@@ -253,8 +254,7 @@ async def deploy_app(relatives, model, series):
             'enable_pagerduty': False
         }
     )
-    await model.add_relation('{}:nrpe-external-master'.format(app_name),
-                             '{}:nrpe-external-master'.format(relatives["mysql"]["name"]))
+
     await model.add_relation('{}:monitors'.format(relatives["nrpe"]["name"]),
                              '{}:monitors'.format(app_name))
     await model.block_until(
