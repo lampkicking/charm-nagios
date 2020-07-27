@@ -251,6 +251,36 @@ def update_contacts():
 
     if forced_contactgroup_members:
         resulting_members = resulting_members + ',' + ','.join(forced_contactgroup_members)
+    # Multiple Email Contacts
+    contacts = []
+    admin_email = list(
+        filter(None, set(hookenv.config('admin_email').split(',')))
+    )
+    if len(admin_email) == 0:
+        hookenv.log("admin_email is unset, this isn't valid config")
+        hookenv.status_set("blocked", "admin_email is not configured")
+        exit(0)
+    hookenv.status_set("active", "ready")
+    if len(admin_email) == 1:
+        hookenv.log("Setting one admin email address '%s'" % admin_email[0])
+        contacts = [{
+            'contact_name': 'root',
+            'alias': 'Root',
+            'email': admin_email[0]
+        }]
+    elif len(admin_email) > 1:
+        hookenv.log("Setting %d admin email addresses" % len(admin_email))
+        contacts = [
+            {
+                'contact_name': email,
+                'alias': email,
+                'email': email
+            }
+            for email in admin_email
+        ]
+        resulting_members = ', '.join([
+            c['contact_name'] for c in contacts
+        ])
 
     # Parse extra_contacts
     extra_contacts = get_extra_contacts(
@@ -262,7 +292,7 @@ def update_contacts():
                        'admin_host_notification_options': hookenv.config('admin_host_notification_options'),
                        'admin_service_notification_commands': hookenv.config('admin_service_notification_commands'),
                        'admin_host_notification_commands': hookenv.config('admin_host_notification_commands'),
-                       'admin_email': hookenv.config('admin_email'),
+                       'contacts': contacts,
                        'contactgroup_members': resulting_members,
                        'extra_contacts': extra_contacts}
 
