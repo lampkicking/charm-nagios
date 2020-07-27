@@ -12,6 +12,7 @@ import stat
 import errno
 import shutil
 import subprocess
+import yaml
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
 from charmhelpers import fetch
@@ -56,6 +57,52 @@ def warn_legacy_relations():
                     "WARNING")
     hookenv.log("Please use the generic juju-info or the monitors interface",
                 "WARNING")
+
+
+# Parses a list of extra Nagios contacts from a YAML string
+# Does basic sanitization only
+def get_extra_contacts(yaml_string, log=False):
+    # Final result
+    extra_contacts = []
+
+    # Valid characters for contact names
+    valid_name_chars = (
+        'abcdefghijklmnopqrstuvwxyz'
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        '0123456789_-'
+    )
+
+    try:
+        extra_contacts_raw = yaml.load(yaml_string, Loader=yaml.SafeLoader) or []
+        if not isinstance(extra_contacts_raw, list):
+            raise ValueError('not a list')
+
+        for contact in extra_contacts_raw:
+            if {'name', 'host', 'service'} > set(contact.keys()):
+                if log:
+                    hookenv.log(
+                        'Contact {} is missing fields.'.format(contact))
+                continue
+
+            if set(contact['name']) >= set(valid_name_chars):
+                if log:
+                    hookenv.log(
+                        'Contact name {} is illegal'.format(contact['name']))
+                continue
+
+            if '\n' in (contact['host'] + contact['service']):
+                if log:
+                    hookenv.log('Line breaks not allowed in commands')
+                continue
+
+            extra_contacts.append(contact)
+
+    except (ValueError, yaml.error.YAMLError) as e:
+        if log:
+            hookenv.log(
+                'Invalid "extra_contacts" configuration: {}'.format(e))
+
+    return extra_contacts
 
 
 # If the charm has extra configuration provided, write that to the
@@ -205,6 +252,10 @@ def update_contacts():
     if forced_contactgroup_members:
         resulting_members = resulting_members + ',' + ','.join(forced_contactgroup_members)
 
+    # Parse extra_contacts
+    extra_contacts = get_extra_contacts(
+        hookenv.config('extra_contacts'), log=True)
+
     template_values = {'admin_service_notification_period': hookenv.config('admin_service_notification_period'),
                        'admin_host_notification_period': hookenv.config('admin_host_notification_period'),
                        'admin_service_notification_options': hookenv.config('admin_service_notification_options'),
@@ -212,7 +263,8 @@ def update_contacts():
                        'admin_service_notification_commands': hookenv.config('admin_service_notification_commands'),
                        'admin_host_notification_commands': hookenv.config('admin_host_notification_commands'),
                        'admin_email': hookenv.config('admin_email'),
-                       'contactgroup_members': resulting_members}
+                       'contactgroup_members': resulting_members,
+                       'extra_contacts': extra_contacts}
 
     with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
         templateDef = f.read()
