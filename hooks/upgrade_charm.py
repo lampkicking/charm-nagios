@@ -104,7 +104,8 @@ def get_extra_contacts(yaml_string, log=False):
                 if log:
                     hookenv.log('Line breaks not allowed in commands')
                 continue
-
+            contact['name'] = contact['name'].lower()
+            contact['alias'] = contact['name'].capitalize()
             extra_contacts.append(contact)
 
     except (ValueError, yaml.error.YAMLError) as e:
@@ -282,8 +283,8 @@ def update_contacts():
         hookenv.log("Setting %d admin email addresses" % len(admin_email))
         contacts = [
             {
-                'contact_name': email,
-                'alias': email,
+                'contact_name': email.lower(),
+                'alias': email.capitalize(),
                 'email': email
             }
             for email in admin_email

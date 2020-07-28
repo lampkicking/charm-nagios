@@ -72,6 +72,18 @@ async def enable_pagerduty(unit):
         app_config = await unit.application.get_config()
         yield app_config['pagerduty_path']['value']
 
+@pytest.fixture
+async def set_extra_contacts(unit):
+    """Set extra contacts."""
+    name = "contact_name_1"
+    extra_contacts = '''
+    - name: {}
+      host: /custom/command/for/host $HOSTNAME$
+      service: /custom/command/for/service $SERVICENAME$
+    '''.format(name)
+    async with config(unit, "extra_contacts", extra_contacts, ""):
+        yield name
+
 
 #########
 # TESTS #
@@ -112,3 +124,21 @@ async def test_pager_duty(unit, enable_pagerduty, file_stat):
     )
     stat = await file_stat('/etc/nagios3/conf.d/pagerduty_nagios.cfg', unit.u)
     assert stat['size'] != 0, "pagerduty_config wasn't a non-zero sized file"
+
+
+async def test_extra_contacts(auth, unit, set_extra_contacts):
+    contancts_url = "http://%s/cgi-bin/nagios3/config.cgi?" \
+                    "type=contacts" % unit.u.public_address
+    contact_name = set_extra_contacts
+    r = requests.get(contancts_url, auth=auth)
+    assert r.status_code == 200, "Get Nagios config request failed"
+    assert r.text.find(contact_name), "Nagios is not loading the extra contact."
+    assert r.text.find(contact_name.capitalize()), "Contact name alias is not " \
+                                                   "the capitalized name."
+    contactgroups_url = "http://%s/cgi-bin/nagios3/config.cgi" \
+                        "?type=contactgroups" % unit.u.public_address
+
+    r = requests.get(contactgroups_url, auth=auth)
+    assert r.status_code == 200, "Get Nagios config request failed"
+    assert r.text.find(contact_name), "Extra contact is not " \
+                                      "added to the contact groups."
