@@ -84,6 +84,12 @@ async def set_extra_contacts(unit):
     async with config(unit, "extra_contacts", extra_contacts, ""):
         yield name
 
+@pytest.fixture
+async def set_multiple_admins(unit):
+    admins = "admin1@localhost,admin2@localhost"
+    async with config(unit, "admin_email", admins, "root@localhost"):
+        yield admins
+
 
 #########
 # TESTS #
@@ -107,7 +113,7 @@ async def test_extra_config(auth, unit):
     host_url = "http://%s/cgi-bin/nagios3/status.cgi?" \
               "hostgroup=all&style=hostdetail" % unit.u.public_address
     r = requests.get(host_url, auth=auth)
-    assert r.text.find('extra_config'), "Nagios is not monitoring extra_config"
+    assert 'extra_config' in r.text, "Nagios is not monitoring extra_config"
 
 
 async def test_live_status(unit, livestatus_path, file_stat):
@@ -132,13 +138,27 @@ async def test_extra_contacts(auth, unit, set_extra_contacts):
     contact_name = set_extra_contacts
     r = requests.get(contancts_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
-    assert r.text.find(contact_name), "Nagios is not loading the extra contact."
-    assert r.text.find(contact_name.capitalize()), "Contact name alias is not " \
-                                                   "the capitalized name."
+    assert contact_name in r.text, "Nagios is not loading the extra contact."
+    assert contact_name.capitalize() in r.text, "Contact name alias is not " \
+                                                "the capitalized name."
     contactgroups_url = "http://%s/cgi-bin/nagios3/config.cgi" \
                         "?type=contactgroups" % unit.u.public_address
 
     r = requests.get(contactgroups_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
-    assert r.text.find(contact_name), "Extra contact is not " \
-                                      "added to the contact groups."
+    assert contact_name in r.text, "Extra contact is not " \
+                                   "added to the contact groups."
+
+async def test_multiple_admin_contacts(auth, unit, set_multiple_admins):
+    contancts_url = "http://%s/cgi-bin/nagios3/config.cgi?" \
+                    "type=contacts" % unit.u.public_address
+    admins = set_multiple_admins
+    r = requests.get(contancts_url, auth=auth)
+    assert r.status_code == 200, "Get Nagios config request failed"
+    admins = admins.split(',')
+    for admin in admins:
+        admin = admin.replace('@', '').replace('.', '').lower()
+        admin_alias = admin.capitalize()
+        assert admin in r.text, "Nagios is not loading contact {}.".format(admin)
+        assert admin_alias in r.text, "Nagios is not loading alias " \
+                                      "for contact {}.".format(admin)

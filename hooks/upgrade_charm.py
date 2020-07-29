@@ -9,6 +9,7 @@ import os
 # import re
 import pwd
 import grp
+import string
 import stat
 import errno
 import shutil
@@ -71,16 +72,12 @@ def warn_legacy_relations():
 
 # Parses a list of extra Nagios contacts from a YAML string
 # Does basic sanitization only
-def get_extra_contacts(yaml_string, log=False):
+def get_extra_contacts(yaml_string):
     # Final result
     extra_contacts = []
 
     # Valid characters for contact names
-    valid_name_chars = (
-        'abcdefghijklmnopqrstuvwxyz'
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        '0123456789_-'
-    )
+    valid_name_chars = string.ascii_letters + string.digits + '_-'
 
     try:
         extra_contacts_raw = yaml.load(yaml_string, Loader=yaml.SafeLoader) or []
@@ -89,29 +86,25 @@ def get_extra_contacts(yaml_string, log=False):
 
         for contact in extra_contacts_raw:
             if {'name', 'host', 'service'} > set(contact.keys()):
-                if log:
-                    hookenv.log(
-                        'Contact {} is missing fields.'.format(contact))
+                hookenv.log('Contact {} is missing fields.'.format(contact),
+                            hookenv.WARNING)
                 continue
 
             if set(contact['name']) >= set(valid_name_chars):
-                if log:
-                    hookenv.log(
-                        'Contact name {} is illegal'.format(contact['name']))
+                hookenv.log('Contact name {} is illegal'.format(contact['name']),
+                            hookenv.WARNING)
                 continue
 
             if '\n' in (contact['host'] + contact['service']):
-                if log:
-                    hookenv.log('Line breaks not allowed in commands')
+                hookenv.log('Line breaks not allowed in commands', hookenv.WARNING)
                 continue
             contact['name'] = contact['name'].lower()
             contact['alias'] = contact['name'].capitalize()
             extra_contacts.append(contact)
 
     except (ValueError, yaml.error.YAMLError) as e:
-        if log:
-            hookenv.log(
-                'Invalid "extra_contacts" configuration: {}'.format(e))
+        hookenv.log('Invalid "extra_contacts" configuration: {}'.format(e),
+                    hookenv.WARNING)
 
     return extra_contacts
 
@@ -258,11 +251,8 @@ def enable_traps_config():
 
 
 def update_contacts():
-    resulting_members = contactgroup_members
-
-    if forced_contactgroup_members:
-        resulting_members = resulting_members + ',' + ','.join(forced_contactgroup_members)
     # Multiple Email Contacts
+    admin_members = ''
     contacts = []
     admin_email = list(
         filter(None, set(hookenv.config('admin_email').split(',')))
@@ -281,21 +271,31 @@ def update_contacts():
         }]
     elif len(admin_email) > 1:
         hookenv.log("Setting %d admin email addresses" % len(admin_email))
-        contacts = [
-            {
-                'contact_name': email.lower(),
-                'alias': email.capitalize(),
+        contacts = []
+        for email in admin_email:
+            contact_name = email.replace('@', '').replace('.','').lower()
+            contact_alias = contact_name.capitalize()
+            contacts.append({
+                'contact_name': contact_name,
+                'alias': contact_alias,
                 'email': email
-            }
-            for email in admin_email
-        ]
-        resulting_members = ', '.join([
+            })
+
+        admin_members = ', '.join([
             c['contact_name'] for c in contacts
         ])
 
+    resulting_members = contactgroup_members
+    if admin_members:
+        # if multiple admin emails are passed ignore contactgroup_members
+        resulting_members = admin_members
+
+    if forced_contactgroup_members:
+        resulting_members = resulting_members + ',' + ','.join(
+            forced_contactgroup_members)
+
     # Parse extra_contacts
-    extra_contacts = get_extra_contacts(
-        hookenv.config('extra_contacts'), log=True)
+    extra_contacts = get_extra_contacts(hookenv.config('extra_contacts'))
 
     template_values = {'admin_service_notification_period': hookenv.config('admin_service_notification_period'),
                        'admin_host_notification_period': hookenv.config('admin_host_notification_period'),
@@ -495,7 +495,7 @@ def update_apache():
     sites = glob.glob("/etc/apache2/sites-available/*.conf")
     non_ssl = set(sites) - {ssl_conf}
     for each in non_ssl:
-        site = os.path.basename(each).strip('.conf')
+        site = os.path.basename(each).rsplit('.', 1)[0]
         Apache2Site(site).action(enabled=HTTP_ENABLED)
 
     # Configure the behavior of https site
@@ -512,8 +512,7 @@ class Apache2Site:
         self.port = 443 if self.is_ssl else 80
 
     def action(self, enabled):
-        fn = self._enable if enabled else self._disable
-        return fn()
+        return self._enable() if enabled else self._disable()
 
     def _call(self, args):
         try:
@@ -553,12 +552,15 @@ def update_password(account, password):
 
 warn_legacy_relations()
 write_extra_config()
-update_config()
-enable_livestatus_config()
-enable_pagerduty_config()
+# enable_traps_config and enable_pagerduty_config modify forced_contactgroup_members
+# they need to run before update_contacts that will consume that global var.
 enable_traps_config()
 if ssl_configured():
     enable_ssl()
+enable_pagerduty_config()
+update_contacts()
+update_config()
+enable_livestatus_config()
 update_apache()
 update_localhost()
 update_cgi_config()

@@ -25,7 +25,7 @@ async def test_hosts_being_monitored(auth, unit):
     host_url = ("http://%s/cgi-bin/nagios3/status.cgi?"
                 "hostgroup=all&style=hostdetail") % unit.u.public_address
     r = requests.get(host_url, auth=auth)
-    assert r.text.find('mysql'), "Nagios is not monitoring the hosts it supposed to."
+    assert 'mysql' in r.text, "Nagios is not monitoring the hosts it supposed to."
 
 
 async def test_nrpe_monitors_config(relatives, unit, file_contents):
