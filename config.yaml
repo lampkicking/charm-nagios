@@ -304,6 +304,9 @@ options:
             Only [A-Za-z0-9_-] contact names are valid. Be careful with
             commands, since they are not sanitized.
             Example
-            - name: contact_name_1
-              host: /custom/command/for/host $HOSTNAME$
-              service: /custom/command/for/service $SERVICENAME$
+            - name: opsteam_email
+              host: /usr/bin/sendmail -s "alert for $HOSTNAME$" opsteam@mycompany.com
+              service: /usr/bin/sendmail -s "alert for $SERVICENAME$" opsteam@mycompany.com
+            - name: snmp_collector
+              host: /path/to/snmp/helper ....
+              service: /path/to/snmp/helper ....

@@ -50,12 +50,9 @@ contactgroup_members = hookenv.config("contactgroup-members")
 forced_contactgroup_members = []
 
 HTTP_ENABLED = ssl_config not in ["only"]
-SSL_CONFIGURED = ssl_config in ["on", "only"]
+SSL_CONFIGURED = ssl_config in ["on", "only", "true"]
 
 
-# Checks the charm relations for legacy relations
-# Inserts warnings into the log about legacy relations, as they will be removed
-# in the future
 def warn_legacy_relations():
     """Checks the charm relations for legacy relations.
 
@@ -70,9 +67,11 @@ def warn_legacy_relations():
                 "WARNING")
 
 
-# Parses a list of extra Nagios contacts from a YAML string
-# Does basic sanitization only
-def get_extra_contacts(yaml_string):
+def parse_extra_contacts(yaml_string):
+    """Parses a list of extra Nagios contacts from a YAML string.
+
+    Does basic sanitization only
+    """
     # Final result
     extra_contacts = []
 
@@ -98,6 +97,7 @@ def get_extra_contacts(yaml_string):
             if '\n' in (contact['host'] + contact['service']):
                 hookenv.log('Line breaks not allowed in commands', hookenv.WARNING)
                 continue
+
             contact['name'] = contact['name'].lower()
             contact['alias'] = contact['name'].capitalize()
             extra_contacts.append(contact)
@@ -105,6 +105,12 @@ def get_extra_contacts(yaml_string):
     except (ValueError, yaml.error.YAMLError) as e:
         hookenv.log('Invalid "extra_contacts" configuration: {}'.format(e),
                     hookenv.WARNING)
+    if len(extra_contacts_raw) != len(extra_contacts):
+        hookenv.log(
+            'Invalid extra_contacts config, found {} contacts defined, '
+            'only {} were valid, check unit logs for '
+            'detailed errors'.format(len(extra_contacts_raw), len(extra_contacts))
+        )
 
     return extra_contacts
 
@@ -169,7 +175,7 @@ def enable_livestatus_config():
 
 
 def enable_pagerduty_config():
-    global  forced_contactgroup_members
+    global forced_contactgroup_members
 
     if enable_pagerduty:
         hookenv.log("Pagerduty is enabled")
@@ -224,6 +230,7 @@ def enable_pagerduty_config():
         if "pagerduty" not in contactgroup_members:
             forced_contactgroup_members.append('pagerduty')
 
+
 def enable_traps_config():
     global forced_contactgroup_members
 
@@ -260,7 +267,7 @@ def update_contacts():
     if len(admin_email) == 0:
         hookenv.log("admin_email is unset, this isn't valid config")
         hookenv.status_set("blocked", "admin_email is not configured")
-        exit(0)
+        exit(1)
     hookenv.status_set("active", "ready")
     if len(admin_email) == 1:
         hookenv.log("Setting one admin email address '%s'" % admin_email[0])
@@ -295,7 +302,7 @@ def update_contacts():
             forced_contactgroup_members)
 
     # Parse extra_contacts
-    extra_contacts = get_extra_contacts(hookenv.config('extra_contacts'))
+    extra_contacts = parse_extra_contacts(hookenv.config('extra_contacts'))
 
     template_values = {'admin_service_notification_period': hookenv.config('admin_service_notification_period'),
                        'admin_host_notification_period': hookenv.config('admin_host_notification_period'),
