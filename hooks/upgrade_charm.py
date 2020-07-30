@@ -89,7 +89,7 @@ def parse_extra_contacts(yaml_string):
                             hookenv.WARNING)
                 continue
 
-            if set(contact['name']) >= set(valid_name_chars):
+            if set(contact['name']) > set(valid_name_chars):
                 hookenv.log('Contact name {} is illegal'.format(contact['name']),
                             hookenv.WARNING)
                 continue
@@ -298,8 +298,7 @@ def update_contacts():
         resulting_members = admin_members
 
     if forced_contactgroup_members:
-        resulting_members = resulting_members + ',' + ','.join(
-            forced_contactgroup_members)
+        resulting_members = ",".join([resulting_members] + forced_contactgroup_members)
 
     # Parse extra_contacts
     extra_contacts = parse_extra_contacts(hookenv.config('extra_contacts'))
@@ -315,9 +314,9 @@ def update_contacts():
                        'extra_contacts': extra_contacts}
 
     with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
-        templateDef = f.read()
+        template_def = f.read()
 
-    t = Template(templateDef)
+    t = Template(template_def)
     with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
         f.write(t.render(template_values))
 
@@ -469,8 +468,8 @@ def update_apache():
     # Start by Setting the ports.conf
 
     with open('hooks/templates/ports-cfg.jinja2', 'r') as f:
-        templateDef = f.read()
-    t = Template(templateDef)
+        template_def = f.read()
+    t = Template(template_def)
     ports_conf = '/etc/apache2/ports.conf'
 
     with open(ports_conf, 'w') as f:
@@ -485,9 +484,9 @@ def update_apache():
                        'ssl_cert': cert_file,
                        'ssl_chain': ssl_chain}
     with open('hooks/templates/default-ssl.tmpl', 'r') as f:
-        templateDef = f.read()
+        template_def = f.read()
 
-    t = Template(templateDef)
+    t = Template(template_def)
     ssl_conf = '/etc/apache2/sites-available/default-ssl.conf'
     with open(ssl_conf, 'w') as f:
         f.write(t.render(template_values))
