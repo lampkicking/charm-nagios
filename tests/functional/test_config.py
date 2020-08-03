@@ -1,6 +1,7 @@
 from async_generator import asynccontextmanager
 import pytest
 import requests
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -8,18 +9,18 @@ pytestmark = pytest.mark.asyncio
 async def config(unit, item, test_value, post_test):
     await unit.application.set_config({item: test_value})
     await unit.block_until_or_timeout(
-        lambda: unit.is_active('executing'), timeout=5,
+        lambda: unit.is_active("executing"), timeout=5,
     )
-    await unit.block_until(lambda: unit.is_active('idle'))
+    await unit.block_until(lambda: unit.is_active("idle"))
     yield test_value
     await unit.application.set_config({item: post_test})
     await unit.block_until_or_timeout(
-        lambda: unit.is_active('executing'), timeout=5,
+        lambda: unit.is_active("executing"), timeout=5,
     )
-    await unit.block_until(lambda: unit.is_active('idle'))
+    await unit.block_until(lambda: unit.is_active("idle"))
 
 
-@pytest.fixture(params=['on', 'only'])
+@pytest.fixture(params=["on", "only"])
 async def ssl(unit, request):
     """
     Enable SSL before a test, then disable after test
@@ -27,7 +28,7 @@ async def ssl(unit, request):
     :param Agent unit:              unit from the fixture
     :param request:                 test parameters
     """
-    async with config(unit, 'ssl', request.param, 'off') as value:
+    async with config(unit, "ssl", request.param, "off") as value:
         yield value
 
 
@@ -58,7 +59,7 @@ async def livestatus_path(unit):
     """
     async with config(unit, "enable_livestatus", "true", "false"):
         app_config = await unit.application.get_config()
-        yield app_config['livestatus_path']['value']
+        yield app_config["livestatus_path"]["value"]
 
 
 @pytest.fixture()
@@ -70,19 +71,23 @@ async def enable_pagerduty(unit):
     """
     async with config(unit, "enable_pagerduty", "true", "false"):
         app_config = await unit.application.get_config()
-        yield app_config['pagerduty_path']['value']
+        yield app_config["pagerduty_path"]["value"]
+
 
 @pytest.fixture
 async def set_extra_contacts(unit):
     """Set extra contacts."""
     name = "contact_name_1"
-    extra_contacts = '''
+    extra_contacts = """
     - name: {}
       host: /custom/command/for/host $HOSTNAME$
       service: /custom/command/for/service $SERVICENAME$
-    '''.format(name)
+    """.format(
+        name
+    )
     async with config(unit, "extra_contacts", extra_contacts, ""):
         yield name
+
 
 @pytest.fixture
 async def set_multiple_admins(unit):
@@ -96,7 +101,7 @@ async def set_multiple_admins(unit):
 #########
 async def test_web_interface_with_ssl(auth, unit, ssl):
     http_url = "http://%s/nagios3/" % unit.u.public_address
-    if ssl == 'only':
+    if ssl == "only":
         with pytest.raises(requests.ConnectionError):
             requests.get(http_url, auth=auth)
     else:
@@ -108,57 +113,63 @@ async def test_web_interface_with_ssl(auth, unit, ssl):
     assert r.status_code == 200, "HTTPs Admin login failed"
 
 
-@pytest.mark.usefixtures('extra_config')
+@pytest.mark.usefixtures("extra_config")
 async def test_extra_config(auth, unit):
-    host_url = "http://%s/cgi-bin/nagios3/status.cgi?" \
-              "hostgroup=all&style=hostdetail" % unit.u.public_address
+    host_url = (
+        "http://%s/cgi-bin/nagios3/status.cgi?"
+        "hostgroup=all&style=hostdetail" % unit.u.public_address
+    )
     r = requests.get(host_url, auth=auth)
-    assert 'extra_config' in r.text, "Nagios is not monitoring extra_config"
+    assert "extra_config" in r.text, "Nagios is not monitoring extra_config"
 
 
 async def test_live_status(unit, livestatus_path, file_stat):
     stat = await file_stat(livestatus_path, unit.u)
-    assert stat['size'] == 0, (
-        "File %s didn't match expected size" % livestatus_path
-    )
+    assert stat["size"] == 0, "File %s didn't match expected size" % livestatus_path
 
 
 async def test_pager_duty(unit, enable_pagerduty, file_stat):
     stat = await file_stat(enable_pagerduty, unit.u)
-    assert stat['size'] != 0, (
-        "Directory %s wasn't a non-zero size" % enable_pagerduty
-    )
-    stat = await file_stat('/etc/nagios3/conf.d/pagerduty_nagios.cfg', unit.u)
-    assert stat['size'] != 0, "pagerduty_config wasn't a non-zero sized file"
+    assert stat["size"] != 0, "Directory %s wasn't a non-zero size" % enable_pagerduty
+    stat = await file_stat("/etc/nagios3/conf.d/pagerduty_nagios.cfg", unit.u)
+    assert stat["size"] != 0, "pagerduty_config wasn't a non-zero sized file"
 
 
 async def test_extra_contacts(auth, unit, set_extra_contacts):
-    contancts_url = "http://%s/cgi-bin/nagios3/config.cgi?" \
-                    "type=contacts" % unit.u.public_address
+    contancts_url = (
+        "http://%s/cgi-bin/nagios3/config.cgi?" "type=contacts" % unit.u.public_address
+    )
     contact_name = set_extra_contacts
     r = requests.get(contancts_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
     assert contact_name in r.text, "Nagios is not loading the extra contact."
-    assert contact_name.capitalize() in r.text, "Contact name alias is not " \
-                                                "the capitalized name."
-    contactgroups_url = "http://%s/cgi-bin/nagios3/config.cgi" \
-                        "?type=contactgroups" % unit.u.public_address
+    assert contact_name.capitalize() in r.text, (
+        "Contact name alias is not " "the capitalized name."
+    )
+    contactgroups_url = (
+        "http://%s/cgi-bin/nagios3/config.cgi"
+        "?type=contactgroups" % unit.u.public_address
+    )
 
     r = requests.get(contactgroups_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
-    assert contact_name in r.text, "Extra contact is not " \
-                                   "added to the contact groups."
+    assert contact_name in r.text, (
+        "Extra contact is not " "added to the contact groups."
+    )
+
 
 async def test_multiple_admin_contacts(auth, unit, set_multiple_admins):
-    contancts_url = "http://%s/cgi-bin/nagios3/config.cgi?" \
-                    "type=contacts" % unit.u.public_address
+    contancts_url = (
+        "http://%s/cgi-bin/nagios3/config.cgi?" "type=contacts" % unit.u.public_address
+    )
     admins = set_multiple_admins
     r = requests.get(contancts_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
-    admins = admins.split(',')
+    admins = admins.split(",")
     for admin in admins:
-        admin = admin.replace('@', '').replace('.', '').lower()
+        admin = admin.replace("@", "").replace(".", "").lower()
         admin_alias = admin.capitalize()
         assert admin in r.text, "Nagios is not loading contact {}.".format(admin)
-        assert admin_alias in r.text, "Nagios is not loading alias " \
-                                      "for contact {}.".format(admin)
+        assert (
+            admin_alias in r.text
+        ), "Nagios is not loading alias " "for contact {}.".format(admin)
