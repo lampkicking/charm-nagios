@@ -24,7 +24,7 @@ async def test_web_interface_is_protected(auth, unit):
 
 async def test_hosts_being_monitored(auth, unit):
     host_url = (
-        "http://%s/cgi-bin/nagios3/status.cgi?" "hostgroup=all&style=hostdetail"
+        "http://%s/cgi-bin/nagios3/status.cgi?hostgroup=all&style=hostdetail"
     ) % unit.u.public_address
     r = requests.get(host_url, auth=auth)
     assert "mysql" in r.text, "Nagios is not monitoring the hosts it supposed to."

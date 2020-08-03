@@ -8,15 +8,11 @@ pytestmark = pytest.mark.asyncio
 @asynccontextmanager
 async def config(unit, item, test_value, post_test):
     await unit.application.set_config({item: test_value})
-    await unit.block_until_or_timeout(
-        lambda: unit.is_active("executing"), timeout=5,
-    )
+    await unit.block_until_or_timeout(lambda: unit.is_active("executing"), timeout=5)
     await unit.block_until(lambda: unit.is_active("idle"))
     yield test_value
     await unit.application.set_config({item: post_test})
-    await unit.block_until_or_timeout(
-        lambda: unit.is_active("executing"), timeout=5,
-    )
+    await unit.block_until_or_timeout(lambda: unit.is_active("executing"), timeout=5)
     await unit.block_until(lambda: unit.is_active("idle"))
 
 
@@ -137,15 +133,15 @@ async def test_pager_duty(unit, enable_pagerduty, file_stat):
 
 async def test_extra_contacts(auth, unit, set_extra_contacts):
     contancts_url = (
-        "http://%s/cgi-bin/nagios3/config.cgi?" "type=contacts" % unit.u.public_address
+        "http://%s/cgi-bin/nagios3/config.cgi?type=contacts" % unit.u.public_address
     )
     contact_name = set_extra_contacts
     r = requests.get(contancts_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
     assert contact_name in r.text, "Nagios is not loading the extra contact."
-    assert contact_name.capitalize() in r.text, (
-        "Contact name alias is not " "the capitalized name."
-    )
+    assert (
+        contact_name.capitalize() in r.text
+    ), "Contact name alias is not the capitalized name."
     contactgroups_url = (
         "http://%s/cgi-bin/nagios3/config.cgi"
         "?type=contactgroups" % unit.u.public_address
@@ -153,14 +149,12 @@ async def test_extra_contacts(auth, unit, set_extra_contacts):
 
     r = requests.get(contactgroups_url, auth=auth)
     assert r.status_code == 200, "Get Nagios config request failed"
-    assert contact_name in r.text, (
-        "Extra contact is not " "added to the contact groups."
-    )
+    assert contact_name in r.text, "Extra contact is not added to the contact groups."
 
 
 async def test_multiple_admin_contacts(auth, unit, set_multiple_admins):
     contancts_url = (
-        "http://%s/cgi-bin/nagios3/config.cgi?" "type=contacts" % unit.u.public_address
+        "http://%s/cgi-bin/nagios3/config.cgi?type=contacts" % unit.u.public_address
     )
     admins = set_multiple_admins
     r = requests.get(contancts_url, auth=auth)
@@ -172,4 +166,4 @@ async def test_multiple_admin_contacts(auth, unit, set_multiple_admins):
         assert admin in r.text, "Nagios is not loading contact {}.".format(admin)
         assert (
             admin_alias in r.text
-        ), "Nagios is not loading alias " "for contact {}.".format(admin)
+        ), "Nagios is not loading alias for contact {}.".format(admin)

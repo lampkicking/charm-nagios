@@ -52,7 +52,7 @@ def _prepare_relation_data(unit, rid):
     relation_data = relation_get(unit=unit, rid=rid)
 
     if not relation_data:
-        msg = "no relation data found for unit {} in relation {} - " "skipping".format(
+        msg = "no relation data found for unit {} in relation {} - skipping".format(
             unit, rid
         )
         log(msg, level=DEBUG)
@@ -72,7 +72,7 @@ def _prepare_relation_data(unit, rid):
             # the relation at first (e.g. gnocchi). After a few hook runs,
             # though, they add the key. For this reason I think using a logging
             # level higher than DEBUG could be misleading
-            msg = "{} not found for unit {} in relation {} - " "skipping".format(
+            msg = "{} not found for unit {} in relation {} - skipping".format(
                 key, unit, rid
             )
             log(msg, level=DEBUG)
