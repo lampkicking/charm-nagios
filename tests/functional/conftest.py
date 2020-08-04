@@ -42,9 +42,11 @@ async def model(controller):
     model = await controller.add_model(model_name)
     yield model
     await model.disconnect()
+
     if os.getenv("PYTEST_KEEP_MODEL"):
         return
     await controller.destroy_model(model_name)
+
     while model_name in await controller.list_models():
         await asyncio.sleep(1)
 
@@ -60,7 +62,7 @@ async def current_model():
 
 @pytest.fixture
 async def get_app(model):
-    """Return the application requested."""
+    """Return the application requested."""  # noqa D202
 
     async def _get_app(name):
         try:
@@ -73,11 +75,12 @@ async def get_app(model):
 
 @pytest.fixture
 async def get_unit(model):
-    """Return the requested <app_name>/<unit_number> unit."""
+    """Return the requested <app_name>/<unit_number> unit."""  # noqa D202
 
     async def _get_unit(name):
         try:
             (app_name, unit_number) = name.split("/")
+
             return model.applications[app_name].units[unit_number]
         except (KeyError, ValueError):
             raise JujuError("Cannot find unit {}".format(name))
@@ -87,7 +90,7 @@ async def get_unit(model):
 
 @pytest.fixture
 async def get_entity(model, get_unit, get_app):
-    """Return a unit or an application."""
+    """Return a unit or an application."""  # noqa D202
 
     async def _get_entity(name):
         try:
@@ -103,7 +106,7 @@ async def get_entity(model, get_unit, get_app):
 
 @pytest.fixture
 async def run_command(get_unit):
-    """Run a command on a unit."""
+    """Run a command on a unit."""  # noqa D202
 
     async def _run_command(cmd, target):
         """
@@ -114,6 +117,7 @@ async def run_command(get_unit):
         """
         unit = target if type(target) is juju.unit.Unit else await get_unit(target)
         action = await unit.run(cmd)
+
         return action.results
 
     return _run_command
@@ -121,16 +125,16 @@ async def run_command(get_unit):
 
 @pytest.fixture
 async def file_stat(run_command):
-    """
-    Run stat on a file.
+    """Run stat on a file.
 
     :param path: File path
     :param target: Unit object or unit name string
-    """
+    """  # noqa D202
 
     async def _file_stat(path, target):
         cmd = STAT_FILE % path
         results = await run_command(cmd, target)
+
         return json.loads(results["Stdout"])
 
     return _file_stat
@@ -138,16 +142,17 @@ async def file_stat(run_command):
 
 @pytest.fixture
 async def file_contents(run_command):
-    """Return the contents of a file."""
+    """Return the contents of a file."""  # noqa D202
 
     async def _file_contents(path, target):
         """Return the contents of a file.
 
-            :param path: File path
-            :param target: Unit object or unit name string
+        :param path: File path
+        :param target: Unit object or unit name string
         """
         cmd = "cat {}".format(path)
         results = await run_command(cmd, target)
+
         return results["Stdout"]
 
     return _file_contents
@@ -155,7 +160,7 @@ async def file_contents(run_command):
 
 @pytest.fixture
 async def reconfigure_app(get_app, model):
-    """Apply a different config to the requested app."""
+    """Apply a different config to the requested app."""  # noqa D202
 
     async def _reconfigure_app(cfg, target):
         application = (
@@ -172,7 +177,7 @@ async def reconfigure_app(get_app, model):
 
 @pytest.fixture
 async def create_group(run_command):
-    """Create the UNIX group specified."""
+    """Create the UNIX group specified."""  # noqa D202
 
     async def _create_group(group_name, target):
         cmd = "sudo groupadd %s" % group_name
@@ -185,11 +190,7 @@ pytestmark = pytest.mark.asyncio
 
 CHARM_BUILD_DIR = os.getenv("CHARM_BUILD_DIR", "..").rstrip("/")
 
-SERIES = [
-    "trusty",
-    "xenial",
-    "bionic",
-]
+SERIES = ["trusty", "xenial", "bionic"]
 
 
 ############
@@ -210,6 +211,7 @@ async def relatives(model, series):
     )
 
     mysql = "mysql"
+
     if series != "trusty":
         mysql = "percona-cluster"
 
@@ -224,7 +226,7 @@ async def relatives(model, series):
     )
     await model.block_until(
         lambda: mysql_app.units[0].workload_status == "active"
-        and mysql_app.units[0].agent_status == "idle"
+        and mysql_app.units[0].agent_status == "idle"  # noqa W503
     )
 
     yield {
@@ -256,10 +258,11 @@ async def deploy_app(relatives, model, series):
     )
     await model.block_until(
         lambda: nagios_app.units[0].agent_status == "idle"
-        and relatives["mysql"]["app"].units[0].agent_status == "idle"
+        and relatives["mysql"]["app"].units[0].agent_status == "idle"  # noqa W503
     )
 
     yield nagios_app
+
     if os.getenv("PYTEST_KEEP_MODEL"):
         return
 
@@ -277,6 +280,7 @@ class Agent:
 
     def is_active(self, status):
         u = self.u
+
         return u.agent_status == status and u.workload_status == "active"
 
     async def block_until_or_timeout(self, lambda_f, **kwargs):
@@ -299,6 +303,7 @@ async def unit(model, deploy_app):
     """Return the unit we've deployed."""
     unit = Agent(deploy_app.units[0], deploy_app)
     await unit.block_until(lambda: unit.is_active("idle"))
+
     return unit
 
 
@@ -306,4 +311,5 @@ async def unit(model, deploy_app):
 async def auth(file_contents, unit):
     """Return the basic auth credentials."""
     nagiospwd = await file_contents("/var/lib/juju/nagios.passwd", unit.u)
+
     return "nagiosadmin", nagiospwd.strip()

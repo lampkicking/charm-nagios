@@ -1,4 +1,5 @@
 import pytest
+
 import requests
 
 pytestmark = pytest.mark.asyncio

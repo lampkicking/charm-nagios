@@ -16,36 +16,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
-import yaml
 import re
+import sys
 from collections import defaultdict
 
 from charmhelpers.core.hookenv import (
-    relation_get,
-    ingress_address,
-    related_units,
-    relation_ids,
-    log,
     DEBUG,
+    ingress_address,
+    log,
+    related_units,
+    relation_get,
+    relation_ids,
 )
 
 from common import (
     customize_service,
+    flush_inprogress_config,
     get_pynag_host,
     get_pynag_service,
-    refresh_hostgroups,
     initialize_inprogress_config,
-    flush_inprogress_config,
+    refresh_hostgroups,
 )
 
+import yaml
 
-REQUIRED_REL_DATA_KEYS = [
-    "target-address",
-    "monitors",
-    "target-id",
-]
+REQUIRED_REL_DATA_KEYS = ["target-address", "monitors", "target-id"]
 
 
 def _prepare_relation_data(unit, rid):
@@ -56,6 +52,7 @@ def _prepare_relation_data(unit, rid):
             unit, rid
         )
         log(msg, level=DEBUG)
+
         return {}
 
     if rid.split(":")[0] == "nagios":
@@ -76,6 +73,7 @@ def _prepare_relation_data(unit, rid):
                 key, unit, rid
             )
             log(msg, level=DEBUG)
+
             return {}
 
     return relation_data
@@ -83,10 +81,12 @@ def _prepare_relation_data(unit, rid):
 
 def _collect_relation_data():
     all_relations = defaultdict(dict)
+
     for relname in ["nagios", "monitors"]:
         for relid in relation_ids(relname):
             for unit in related_units(relid):
                 relation_data = _prepare_relation_data(unit=unit, rid=relid)
+
                 if relation_data:
                     all_relations[relid][unit] = relation_data
 
@@ -98,8 +98,10 @@ def main(argv):  # noqa: C901
     # and target-address' so the hook can be tested without being in a hook
     # context.
     #
+
     if len(argv) > 1:
         relation_settings = {"monitors": open(argv[1]).read(), "target-id": argv[2]}
+
         if len(argv) > 3:
             relation_settings["target-address"] = argv[3]
         all_relations = {"monitors:99": {"testing/0": relation_settings}}
@@ -108,11 +110,13 @@ def main(argv):  # noqa: C901
 
     # Hack to work around http://pad.lv/1025478
     targets_with_addresses = set()
+
     for relid, units in all_relations.iteritems():
         for unit, relation_settings in units.items():
             if "target-id" in relation_settings:
                 targets_with_addresses.add(relation_settings["target-id"])
     new_all_relations = {}
+
     for relid, units in all_relations.iteritems():
         for unit, relation_settings in units.items():
             if relation_settings["target-id"] in targets_with_addresses:
@@ -124,11 +128,14 @@ def main(argv):  # noqa: C901
     initialize_inprogress_config()
     # make a dict of machine ids to target-id hostnames
     all_hosts = {}
+
     for relid, units in all_relations.items():
         for unit, relation_settings in units.iteritems():
             machine_id = relation_settings.get("machine_id", None)
+
             if machine_id:
                 all_hosts[machine_id] = relation_settings["target-id"]
+
     for relid, units in all_relations.items():
         apply_relation_config(relid, units, all_hosts)
     refresh_hostgroups()
@@ -142,10 +149,13 @@ def apply_relation_config(relid, units, all_hosts):  # noqa: C901
         target_id = relation_settings["target-id"]
         machine_id = relation_settings.get("machine_id", None)
         parent_host = None
+
         if machine_id:
             container_regex = re.compile(r"(\d+)/lx[cd]/\d+")
+
             if container_regex.search(machine_id):
                 parent_machine = container_regex.search(machine_id).group(1)
+
                 if parent_machine in all_hosts:
                     parent_host = all_hosts[parent_machine]
 
@@ -159,9 +169,11 @@ def apply_relation_config(relid, units, all_hosts):  # noqa: C901
 
         # Output nagios config
         host = get_pynag_host(target_id)
+
         if not target_address:
             raise Exception("No Target Address provied by NRPE service!")
         host.set_attribute("address", target_address)
+
         if parent_host:
             # We assume that we only want one parent and will overwrite any
             # existing parents for this host.
@@ -172,6 +184,7 @@ def apply_relation_config(relid, units, all_hosts):  # noqa: C901
             for mon_name, mon in mons.iteritems():
                 service_name = "%s-%s" % (target_id, mon_name)
                 service = get_pynag_service(target_id, service_name)
+
                 if customize_service(service, mon_family, mon_name, mon):
                     service.save()
                 else:

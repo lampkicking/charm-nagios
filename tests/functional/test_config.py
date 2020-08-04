@@ -1,5 +1,7 @@
 from async_generator import asynccontextmanager
+
 import pytest
+
 import requests
 
 pytestmark = pytest.mark.asyncio
@@ -18,8 +20,7 @@ async def config(unit, item, test_value, post_test):
 
 @pytest.fixture(params=["on", "only"])
 async def ssl(unit, request):
-    """
-    Enable SSL before a test, then disable after test
+    """Enable SSL before a test, then disable after test.
 
     :param Agent unit:              unit from the fixture
     :param request:                 test parameters
@@ -30,8 +31,7 @@ async def ssl(unit, request):
 
 @pytest.fixture
 async def extra_config(unit):
-    """
-    Enable extraconfig for a test, and revert afterwards
+    """Enable extraconfig for a test, and revert afterwards.
 
     :param Agent unit:              unit from the fixture
     """
@@ -48,8 +48,7 @@ async def extra_config(unit):
 
 @pytest.fixture
 async def livestatus_path(unit):
-    """
-    Enable livestatus before a test, then disable after test
+    """Enable livestatus before a test, then disable after test.
 
     :param Agent unit:              unit from the fixture
     """
@@ -60,8 +59,7 @@ async def livestatus_path(unit):
 
 @pytest.fixture()
 async def enable_pagerduty(unit):
-    """
-    Enable enable_pagerduty before first test, then disable after last test
+    """Enable enable_pagerduty before first test, then disable after last test.
 
     :param Agent unit:              unit from the fixture
     """

@@ -3,24 +3,25 @@
 # Rewritten from bash to python 3/2/2014 for charm helper inclusion
 # of SSL-Everywhere!
 import base64
-from jinja2 import Template
-import glob
-import os
-
-# import re
-import pwd
-import grp
-import string
-import stat
 import errno
+import glob
+import grp
+import os
+import pwd
 import shutil
+import stat
+import string
 import subprocess
-import yaml
+
+from charmhelpers import fetch
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
-from charmhelpers import fetch
 
 from common import update_localhost
+
+from jinja2 import Template
+
+import yaml
 
 # Gather facts
 legacy_relations = hookenv.config("legacy")
@@ -55,7 +56,7 @@ SSL_CONFIGURED = ssl_config in ["on", "only", "true"]
 
 
 def warn_legacy_relations():
-    """Checks the charm relations for legacy relations.
+    """Check the charm relations for legacy relations.
 
     Inserts warnings into the log about legacy relations, as they will be removed
     in the future
@@ -70,7 +71,7 @@ def warn_legacy_relations():
 
 
 def parse_extra_contacts(yaml_string):
-    """Parses a list of extra Nagios contacts from a YAML string.
+    """Parse a list of extra Nagios contacts from a YAML string.
 
     Does basic sanitization only
     """
@@ -82,6 +83,7 @@ def parse_extra_contacts(yaml_string):
 
     try:
         extra_contacts_raw = yaml.load(yaml_string, Loader=yaml.SafeLoader) or []
+
         if not isinstance(extra_contacts_raw, list):
             raise ValueError("not a list")
 
@@ -90,6 +92,7 @@ def parse_extra_contacts(yaml_string):
                 hookenv.log(
                     "Contact {} is missing fields.".format(contact), hookenv.WARNING
                 )
+
                 continue
 
             if set(contact["name"]) > set(valid_name_chars):
@@ -97,10 +100,12 @@ def parse_extra_contacts(yaml_string):
                     "Contact name {} is illegal".format(contact["name"]),
                     hookenv.WARNING,
                 )
+
                 continue
 
             if "\n" in (contact["host"] + contact["service"]):
                 hookenv.log("Line breaks not allowed in commands", hookenv.WARNING)
+
                 continue
 
             contact["name"] = contact["name"].lower()
@@ -111,6 +116,7 @@ def parse_extra_contacts(yaml_string):
         hookenv.log(
             'Invalid "extra_contacts" configuration: {}'.format(e), hookenv.WARNING
         )
+
     if len(extra_contacts_raw) != len(extra_contacts):
         hookenv.log(
             "Invalid extra_contacts config, found {} contacts defined, "
@@ -125,10 +131,12 @@ def parse_extra_contacts(yaml_string):
 # proper nagios3 configuration file, otherwise remove the config
 def write_extra_config():
     # Be predjudice about this - remove the file always.
+
     if host.file_hash("/etc/nagios3/conf.d/extra.cfg") is not None:
         os.remove("/etc/nagios3/conf.d/extra.cfg")
     # If we have a config, then write it. the hook reconfiguration will
     # handle the details
+
     if extra_config is not None:
         host.write_file("/etc/nagios3/conf.d/extra.cfg", extra_config)
 
@@ -150,6 +158,7 @@ def fixpath(path):
     if os.path.isdir(path):
         st = os.stat(path)
         os.chmod(path, st.st_mode | stat.S_IXOTH)
+
     if path != "/":
         fixpath(os.path.split(path)[0])
 
@@ -163,6 +172,7 @@ def enable_livestatus_config():
         # Make the directory and fix perms on it
         hookenv.log("Fixing perms on livestatus_path")
         livestatus_dir = os.path.dirname(livestatus_path)
+
         if not os.path.isdir(livestatus_dir):
             hookenv.log("Making path for livestatus_dir")
             mkdir_p(livestatus_dir)
@@ -202,16 +212,16 @@ def enable_pagerduty_config():
         }
 
         with open("hooks/templates/pagerduty_nagios_cfg.tmpl", "r") as f:
-            templateDef = f.read()
+            template_def = f.read()
 
-        t = Template(templateDef)
+        t = Template(template_def)
         with open(pagerduty_cfg, "w") as f:
             f.write(t.render(template_values))
 
         with open("hooks/templates/nagios-pagerduty-flush-cron.tmpl", "r") as f2:
-            templateDef = f2.read()
+            template_def = f2.read()
 
-        t2 = Template(templateDef)
+        t2 = Template(template_def)
         with open(pagerduty_cron, "w") as f2:
             f2.write(t2.render(template_values))
 
@@ -219,6 +229,7 @@ def enable_pagerduty_config():
         shutil.copy("files/pagerduty_nagios.pl", "/usr/local/bin/pagerduty_nagios.pl")
 
         # Create the pagerduty queue dir
+
         if not os.path.isdir(pagerduty_path):
             hookenv.log("Making path for pagerduty_path")
             mkdir_p(pagerduty_path)
@@ -228,14 +239,18 @@ def enable_pagerduty_config():
         os.chown(pagerduty_path, uid, gid)
     else:
         # Clean up the files if we don't want pagerduty
+
         if os.path.isfile(pagerduty_cfg):
             os.remove(pagerduty_cfg)
+
         if os.path.isfile(pagerduty_cron):
             os.remove(pagerduty_cron)
 
     # Update contacts for admin
+
     if enable_pagerduty:
         # avoid duplicates
+
         if "pagerduty" not in contactgroup_members:
             forced_contactgroup_members.append("pagerduty")
 
@@ -249,6 +264,7 @@ def enable_traps_config():
         if os.path.isfile(traps_cfg):
             os.remove(traps_cfg)
         hookenv.log("Send traps feature is disabled")
+
         return
 
     hookenv.log("Send traps feature is enabled, target address is %s" % send_traps_to)
@@ -259,9 +275,9 @@ def enable_traps_config():
     template_values = {"send_traps_to": send_traps_to}
 
     with open("hooks/templates/traps.tmpl", "r") as f:
-        templateDef = f.read()
+        template_def = f.read()
 
-    t = Template(templateDef)
+    t = Template(template_def)
     with open(traps_cfg, "w") as f:
         f.write(t.render(template_values))
 
@@ -271,17 +287,20 @@ def update_contacts():
     admin_members = ""
     contacts = []
     admin_email = list(filter(None, set(hookenv.config("admin_email").split(","))))
+
     if len(admin_email) == 0:
         hookenv.log("admin_email is unset, this isn't valid config")
         hookenv.status_set("blocked", "admin_email is not configured")
         exit(1)
     hookenv.status_set("active", "ready")
+
     if len(admin_email) == 1:
         hookenv.log("Setting one admin email address '%s'" % admin_email[0])
         contacts = [{"contact_name": "root", "alias": "Root", "email": admin_email[0]}]
     elif len(admin_email) > 1:
         hookenv.log("Setting %d admin email addresses" % len(admin_email))
         contacts = []
+
         for email in admin_email:
             contact_name = email.replace("@", "").replace(".", "").lower()
             contact_alias = contact_name.capitalize()
@@ -292,6 +311,7 @@ def update_contacts():
         admin_members = ", ".join([c["contact_name"] for c in contacts])
 
     resulting_members = contactgroup_members
+
     if admin_members:
         # if multiple admin emails are passed ignore contactgroup_members
         resulting_members = admin_members
@@ -338,8 +358,10 @@ def update_contacts():
 
 def ssl_configured():
     allowed_options = ["on", "only"]
+
     if str(ssl_config).lower() in allowed_options:
         return True
+
     return False
 
 
@@ -359,8 +381,10 @@ chain_file = "/etc/ssl/certs/%s.csr" % (cert_domain)
 def check_ssl_files():
     key = os.path.exists(deploy_key_path)
     cert = os.path.exists(deploy_cert_path)
+
     if key is False or cert is False:
         return False
+
     return True
 
 
@@ -370,9 +394,11 @@ def decode_ssl_keys():
         hookenv.log("Writing key from config ssl_key: %s" % key_file)
         with open(key_file, "w") as f:
             f.write(str(base64.b64decode(hookenv.config("ssl_key"))))
+
     if hookenv.config("ssl_cert"):
         with open(cert_file, "w") as f:
             f.write(str(base64.b64decode(hookenv.config("ssl_cert"))))
+
     if hookenv.config("ssl_chain"):
         with open(chain_file, "w") as f:
             f.write(str(base64.b64decode(hookenv.config("ssl_cert"))))
@@ -382,10 +408,13 @@ def enable_ssl():
     # Set the basename of all ssl files
 
     # Validate that we have configs, and generate a self signed certificate.
+
     if not hookenv.config("ssl_cert"):
         # bail if keys already exist
+
         if os.path.exists(cert_file):
             hookenv.log("Keys exist, not creating keys!", "WARNING")
+
             return
         # Generate a self signed key using CharmHelpers
         hookenv.log("Generating Self Signed Certificate", "INFO")
@@ -405,6 +434,7 @@ def update_config():
     local_host_name = "nagios"
     principal_unitname = hookenv.principal_unit()
     # Fallback to using "primary" if it exists.
+
     if principal_unitname:
         local_host_name = principal_unitname
     else:
@@ -437,16 +467,16 @@ def update_config():
     }
 
     with open("hooks/templates/nagios-cfg.tmpl", "r") as f:
-        templateDef = f.read()
+        template_def = f.read()
 
-    t = Template(templateDef)
+    t = Template(template_def)
     with open(nagios_cfg, "w") as f:
         f.write(t.render(template_values))
 
     with open("hooks/templates/localhost_nagios2.cfg.tmpl", "r") as f:
-        templateDef = f.read()
+        template_def = f.read()
 
-    t = Template(templateDef)
+    t = Template(template_def)
     with open("/etc/nagios3/conf.d/localhost_nagios2.cfg", "w") as f:
         f.write(t.render(template_values))
 
@@ -456,9 +486,9 @@ def update_config():
 def update_cgi_config():
     template_values = {"nagiosadmin": nagiosadmin, "ro_password": ro_password}
     with open("hooks/templates/nagios-cgi.tmpl", "r") as f:
-        templateDef = f.read()
+        template_def = f.read()
 
-    t = Template(templateDef)
+    t = Template(template_def)
     with open(nagios_cgi_cfg, "w") as f:
         f.write(t.render(template_values))
 
@@ -472,12 +502,12 @@ def update_cgi_config():
 # note: i tried to use cheetah, and it barfed, several times. It can go play
 # in a fire. I'm jusing jinja2.
 def update_apache():
-    """
+    """Add SSL keys to default-ssl config.
+
     Nagios3 is deployed as a global apache application from the archive.
     We'll get a little funky and add the SSL keys to the default-ssl config
     which sets our keys, including the self-signed ones, as the host keyfiles.
     """
-
     # Start by Setting the ports.conf
 
     with open("hooks/templates/ports-cfg.jinja2", "r") as f:
@@ -489,6 +519,7 @@ def update_apache():
         f.write(t.render({"enable_http": HTTP_ENABLED}))
 
     # Next setup the default-ssl.conf
+
     if os.path.exists(chain_file) and os.path.getsize(chain_file) > 0:
         ssl_chain = chain_file
     else:
@@ -515,6 +546,7 @@ def update_apache():
     # Configure the behavior of http sites
     sites = glob.glob("/etc/apache2/sites-available/*.conf")
     non_ssl = set(sites) - {ssl_conf}
+
     for each in non_ssl:
         site = os.path.basename(each).rsplit(".", 1)[0]
         Apache2Site(site).action(enabled=HTTP_ENABLED)
@@ -549,6 +581,7 @@ class Apache2Site:
     def _enable(self):
         hookenv.log("Apache2Site: Enabling %s..." % self.site, "INFO")
         self._call(["a2ensite", self.site])
+
         if self.port == 443:
             self._call(["a2enmod", "ssl"])
         hookenv.open_port(self.port)
@@ -562,6 +595,7 @@ class Apache2Site:
 def update_password(account, password):
     """Update the charm and Apache's record of the password for the supplied account."""
     account_file = "".join(["/var/lib/juju/nagios.", account, ".passwd"])
+
     if password:
         with open(account_file, "w") as f:
             f.write(password)
@@ -580,6 +614,7 @@ write_extra_config()
 # enable_traps_config and enable_pagerduty_config modify forced_contactgroup_members
 # they need to run before update_contacts that will consume that global var.
 enable_traps_config()
+
 if ssl_configured():
     enable_ssl()
 enable_pagerduty_config()
@@ -591,8 +626,10 @@ update_localhost()
 update_cgi_config()
 update_contacts()
 update_password("nagiosro", ro_password)
+
 if password:
     update_password(nagiosadmin, password)
+
 if nagiosadmin != "nagiosadmin":
     update_password("nagiosadmin", False)
 
