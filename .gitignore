@@ -1,13 +1,41 @@
-*.pyc
-*.swp
-*~
+# Juju files
+.unit-state.db
+.go-cookies
+
+layers/*
+interfaces/*
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
-data/*.pem
-data/*.key
-data/*.crt
-data/*.csr
-.tox/
-.idea/
-reports/
+*.py[cod]
+*$py.class
+
+# Tests files and dir
+.pytest_cache/
 .coverage
+.tox
+report/
+htmlcov/
+
+# Log files
+*.log
+
+# pycharm
+.idea/
+
+# vi
+.*.swp
+
+# version data
 repo-info
+version
+
+# Python builds
+deb_dist/
+dist/
+
+# Snaps
+*.snap
+
+# Builds
+.build/

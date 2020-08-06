@@ -1,60 +1,75 @@
-#!/usr/bin/make
 PYTHON := /usr/bin/python3
-export PYTHONPATH := hooks
-PROJECTPATH = $(dir $(realpath $(MAKEFILE_LIST)))
-METADATA_FILE = "metadata.yaml"
-CHARM_NAME = $(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $$2}')
+
+PROJECTPATH=$(dir $(realpath $(MAKEFILE_LIST)))
 ifndef CHARM_BUILD_DIR
-    CHARM_BUILD_DIR := /tmp/charm-builds
-    $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
+	CHARM_BUILD_DIR=${PROJECTPATH}.build
 endif
+METADATA_FILE="metadata.yaml"
+CHARM_NAME=$(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $$2}')
 
-default:
-	echo Nothing to do
-
-test: lint proof unittest functional
-	@echo "Testing charm $(CHARM_NAME)"
-
-lint:
-	@echo "Running flake8"
-	@tox -e lint
-
-build:
-	@echo "Building charm to base directory $(CHARM_BUILD_DIR)/$(CHARM_NAME)"
-	@-git describe --tags > ./repo-info
-	@mkdir -p $(CHARM_BUILD_DIR)/$(CHARM_NAME)
-	@cp -r * $(CHARM_BUILD_DIR)/$(CHARM_NAME)
-
-# Primitive test runner. Someone please fix this.
-functional: build
-	@echo Executing functional tests in $(CHARM_BUILD_DIR)
-	@CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) \
-     PYTEST_KEEP_MODEL=$(PYTEST_KEEP_MODEL) \
-	 PYTEST_CLOUD_NAME=$(PYTEST_CLOUD_NAME) \
-	 PYTEST_CLOUD_REGION=$(PYTEST_CLOUD_REGION) \
-	 tox -e functional
-
-unittest:
-	@echo "Running unit tests"
-	@tox -e unit
-
-proof:
-	@echo "Running charm proof"
-	@charm proof
+help:
+	@echo "This project supports the following targets"
+	@echo ""
+	@echo " make help - show this text"
+	@echo " make clean - remove unneeded files"
+	@echo " make submodules - make sure that the submodules are up-to-date"
+	@echo " make submodules-update - update submodules to latest changes on remote branch"
+	@echo " make build - build the charm"
+	@echo " make release - run clean and build targets"
+	@echo " make lint - run flake8 and black --check"
+	@echo " make black - run black and reformat files"
+	@echo " make proof - run charm proof"
+	@echo " make unittests - run the tests defined in the unittest subdirectory"
+	@echo " make functional - run the tests defined in the functional subdirectory"
+	@echo " make test - run lint, proof, unittests and functional targets"
+	@echo ""
 
 clean:
 	@echo "Cleaning files"
-	@if [ -d .tox ] ; then rm -r .tox ; fi
-	@if [ -d .pytest_cache ] ; then rm -r .pytest_cache ; fi
-	@find . | grep -E "\(__pycache__|\.pyc|\.pyo$$\)" | xargs rm -rf
-	@rm -rf $(CHARM_BUILD_DIR)/$(CHARM_NAME)/*
+	@git clean -ffXd -e '!.idea'
+	@echo "Cleaning existing build"
+	@rm -rf ${CHARM_BUILD_DIR}/${CHARM_NAME}
 
+submodules:
+	@echo "Cloning submodules"
+	@git submodule update --init --recursive
 
-bin/charm_helpers_sync.py:
-	@mkdir -p bin
-	@curl -o bin/charm_helpers_sync.py https://raw.githubusercontent.com/juju/charm-helpers/master/tools/charm_helpers_sync/charm_helpers_sync.py
+submodules-update:
+	@echo "Pulling latest updates for submodules"
+	@git submodule update --init --recursive --remote --merge
 
-sync: bin/charm_helpers_sync.py
-	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers.yaml
+build:
+	@echo "Building charm to base directory ${CHARM_BUILD_DIR}/${CHARM_NAME}"
+	@-git rev-parse --abbrev-ref HEAD > ./repo-info
+	@-git describe --always > ./version
+	@mkdir -p ${CHARM_BUILD_DIR}/${CHARM_NAME}
+	@cp -a ./* ${CHARM_BUILD_DIR}/${CHARM_NAME}
 
+release: clean build
+	@echo "Charm is built at ${CHARM_BUILD_DIR}/${CHARM_NAME}"
 
+lint:
+	@echo "Running lint checks"
+	@tox -e lint
+
+black:
+	@echo "Reformat files with black"
+	@tox -e black
+
+proof:
+	@echo "Running charm proof"
+	@-charm proof
+
+unittests:
+	@echo "Running unit tests"
+	@tox -e unit
+
+functional: build
+	@echo "Executing functional tests in ${CHARM_BUILD_DIR}"
+	@CHARM_BUILD_DIR=${CHARM_BUILD_DIR} tox -e func
+
+test: lint proof unittests functional
+	@echo "Charm ${CHARM_NAME} has been tested"
+
+# The targets below don't depend on a file
+.PHONY: help submodules submodules-update clean build release lint black proof unittests functional test

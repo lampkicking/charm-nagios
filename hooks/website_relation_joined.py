@@ -15,25 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import common
+from charmhelpers.core.hookenv import config, log, relation_set
 
-from charmhelpers.core.hookenv import (
-    config,
-    log,
-    relation_set,
-)
+import common
 
 
 def main():
-    relation_data = {'hostname': common.get_local_ingress_address()}
-    sslcfg = config()['ssl']
-    if sslcfg == 'only':
-        relation_data['port'] = 443
+    relation_data = {"hostname": common.get_local_ingress_address()}
+    sslcfg = config()["ssl"]
+
+    if sslcfg == "only":
+        relation_data["port"] = 443
     else:
-        relation_data['port'] = 80
-    log('website-relation-joined data %s' % relation_data)
+        relation_data["port"] = 80
+    log("website-relation-joined data %s" % relation_data)
     relation_set(None, **relation_data)
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     main()
