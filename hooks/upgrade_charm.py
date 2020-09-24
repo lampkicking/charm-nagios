@@ -13,6 +13,13 @@ import stat
 import string
 import subprocess
 
+try:
+    from enum import Enum  # noqa: F401
+except ImportError:
+    subprocess.check_call(
+        "DEBIAN_FRONTEND=noninteractive apt-get -qy install python-enum34", shell=True
+    )
+
 from charmhelpers import fetch
 from charmhelpers.contrib import ssl
 from charmhelpers.core import hookenv, host
