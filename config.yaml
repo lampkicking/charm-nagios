@@ -118,6 +118,23 @@ options:
         description: >
             Email address used for the admin pager, used by $ADMINPAGER$ in
             notification commands.
+    enable_slack:
+        type: boolean
+        default: false
+        description: |
+            Config variable to enable slack.
+    slack_domain:
+        type: string
+        default: ''
+        description: 'Domain to send slack alerts to'
+    slack_token:
+        type: string
+        default: ''
+        description: 'API token used to authenticate with slack'
+    slack_channel:
+        type: string
+        default: ''
+        description: 'Slack channel to post alerts to (without the #), for example "general"'
     enable_opsgenie:
         type: boolean
         default: false

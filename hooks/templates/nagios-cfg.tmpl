@@ -20,6 +20,7 @@ log_file=/var/log/nagios3/nagios.log
 # Commands definitions
 cfg_file=/etc/nagios3/commands.cfg
 {% if enable_opsgenie -%}cfg_file=/etc/nagios3/opsgenie.cfg{% endif %}
+{% if enable_slack -%}cfg_file=/etc/nagios3/slack.cfg{% endif %}
 
 # Debian also defaults to using the check commands defined by the debian
 # nagios-plugins package
