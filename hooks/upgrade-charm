@@ -40,6 +40,12 @@ pagerduty_cron = "/etc/cron.d/nagios-pagerduty-flush"
 password = hookenv.config('password')
 ro_password = hookenv.config('ro-password')
 nagiosadmin = hookenv.config('nagiosadmin') or 'nagiosadmin'
+enable_slack = hookenv.config('enable_slack')
+slack_cfg = "/etc/nagios3/slack.cfg"
+slack_exec = "/usr/local/bin/slack_nagios.pl"
+slack_domain = hookenv.config('slack_domain')
+slack_token = hookenv.config('slack_token')
+slack_channel = hookenv.config('slack_channel')
 
 
 # Checks the charm relations for legacy relations
@@ -113,6 +119,53 @@ def enable_livestatus_config():
                  stat.S_ISGID | stat.S_IXUSR | stat.S_IXGRP)
 
 
+def enable_slack_config():
+    if enable_slack:
+        hookenv.log("Slack is enabled")
+
+        # Install pks required for slack pearl script
+        fetch.apt_update()
+        slack_pkgs = ('libwww-perl', 'libcrypt-ssleay-perl')
+        for pkg in slack_pkgs:
+            fetch.apt_install(pkg)
+
+        # Build template dict for later
+        slack-template-values = {
+            'slack_channel': slack_channel,
+            'slack_domain': slack_domain,
+            'slack_token': slack_token,
+        }
+
+        # Load template for config file and render with template
+        with open('hooks/templates/slack-cfg.tmpl', 'r') as f:
+            templateDef = f.read()
+       
+        t = Template(templateDef)
+        with open(slack_cfg, 'w') as f:
+            f.write(t.render(slack-template-values))
+
+        # Load template for script and render with template
+        ## Source for script https://raw.github.com/tinyspeck/services-examples/master/nagios.pl
+        with open('hooks/templates/slack_nagios.pl.tmpl', 'r') as f:
+            templateDef = f.read()
+
+        t = Template(templateDef)
+        with open(slack_exec, 'w') as f:
+            f.write(t.render(slack-template-values))
+
+        # Make script executable
+        os.chmod(slack_exec, 755)
+    else:
+        # Clean up the files if we don't want slack
+        if os.path.isfile(slack_cfg):
+            os.remove(slack_cfg)
+
+        if os.path.isfile(slack_exec):
+            os.remove(slack_exec)
+
+    host.service_reload('nagios3')
+
+
 def enable_pagerduty_config():
     if enable_pagerduty:
         hookenv.log("Pagerduty is enabled")
@@ -161,12 +214,28 @@ def enable_pagerduty_config():
         if os.path.isfile(pagerduty_cron):
             os.remove(pagerduty_cron)
 
+    host.service_reload('nagios3')
+
+
+def contactgroup_config():
+    '''
+    This has been moved so pagerduty, opsgenie, and slack can coexist in contact groups without issues.
+    '''
     # Update contacts for admin
+    # TODO clean this up in other places too
     contactgroup_members = hookenv.config("contactgroup-members")
+    
     if enable_pagerduty:
-        # avoid duplicates
         if "pagerduty" not in contactgroup_members:
             contactgroup_members += ", pagerduty"
+
+    if enable_opsgenie:
+        if "opsgenie" not in contactgroup_members:
+            contactgroup_members += ", opsgenie"
+
+    if enable_slack:
+        if "slack" not in contactgroup_members:
+            contactgroup_members += ", slack"
 
     template_values = {'admin_service_notification_period': hookenv.config('admin_service_notification_period'),
                        'admin_host_notification_period': hookenv.config('admin_host_notification_period'),
@@ -175,8 +244,6 @@ def enable_pagerduty_config():
                        'admin_service_notification_commands': hookenv.config('admin_service_notification_commands'),
                        'admin_host_notification_commands': hookenv.config('admin_host_notification_commands'),
                        'admin_email': hookenv.config('admin_email'),
-                       'enable_opsgenie': enable_opsgenie,
-                       'enable_pagerduty': enable_pagerduty,
                        'contactgroup_members': contactgroup_members}
 
     with open('hooks/templates/contacts-cfg.tmpl', 'r') as f:
@@ -185,7 +252,7 @@ def enable_pagerduty_config():
     t = Template(templateDef)
     with open('/etc/nagios3/conf.d/contacts_nagios2.cfg', 'w') as f:
         f.write(t.render(template_values))
-
+    
     host.service_reload('nagios3')
 
 
@@ -378,6 +445,8 @@ write_extra_config()
 update_config()
 enable_livestatus_config()
 enable_pagerduty_config()
+enable_slack_config()
+contactgroup_config()
 if ssl_configured():
     enable_ssl()
 update_apache()
