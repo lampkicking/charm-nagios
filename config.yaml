@@ -123,18 +123,10 @@ options:
         default: false
         description: |
             Config variable to enable slack.
-    slack_domain:
+    slack_webhook:
         type: string
         default: ''
-        description: 'Domain to send slack alerts to'
-    slack_token:
-        type: string
-        default: ''
-        description: 'API token used to authenticate with slack'
-    slack_channel:
-        type: string
-        default: ''
-        description: 'Slack channel to post alerts to (without the #), for example "general"'
+        description: 'Webhook URL for slack'
     enable_opsgenie:
         type: boolean
         default: false

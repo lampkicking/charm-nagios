@@ -42,10 +42,8 @@ ro_password = hookenv.config('ro-password')
 nagiosadmin = hookenv.config('nagiosadmin') or 'nagiosadmin'
 enable_slack = hookenv.config('enable_slack')
 slack_cfg = "/etc/nagios3/slack.cfg"
-slack_exec = "/usr/local/bin/slack_nagios.pl"
-slack_domain = hookenv.config('slack_domain')
-slack_token = hookenv.config('slack_token')
-slack_channel = hookenv.config('slack_channel')
+slack_exec = "/usr/local/bin/slack_nagios.sh"
+slack_webhook = hookenv.config('slack_webhook')
 
 
 # Checks the charm relations for legacy relations
@@ -123,30 +121,17 @@ def enable_slack_config():
     if enable_slack:
         hookenv.log("Slack is enabled")
 
-        # Install pks required for slack pearl script
-        fetch.apt_update()
-        slack_pkgs = ('libwww-perl', 'libcrypt-ssleay-perl')
-        for pkg in slack_pkgs:
-            fetch.apt_install(pkg)
-
         # Build template dict for later
         slack-template-values = {
-            'slack_channel': slack_channel,
-            'slack_domain': slack_domain,
-            'slack_token': slack_token,
+            'slack_webhook': slack_webhook,
         }
 
-        # Load template for config file and render with template
-        with open('hooks/templates/slack-cfg.tmpl', 'r') as f:
-            templateDef = f.read()
-       
-        t = Template(templateDef)
-        with open(slack_cfg, 'w') as f:
-            f.write(t.render(slack-template-values))
+        # Copy slack config file
+        shutil.copy('hooks/templates/slack.cfg',
+                    slack_cfg)
 
         # Load template for script and render with template
-        ## Source for script https://raw.github.com/tinyspeck/services-examples/master/nagios.pl
-        with open('hooks/templates/slack_nagios.pl.tmpl', 'r') as f:
+        with open('hooks/templates/slack_nagios.tmpl', 'r') as f:
             templateDef = f.read()
 
         t = Template(templateDef)
@@ -333,6 +318,7 @@ def update_config():
                        'nagios_group': nagios_group,
                        'enable_livestatus': enable_livestatus,
                        'enable_opsgenie': enable_opsgenie,
+                       'enable_slack': enable_slack,
                        'livestatus_path': livestatus_path,
                        'livestatus_args': hookenv.config('livestatus_args'),
                        'check_external_commands': hookenv.config('check_external_commands'),
