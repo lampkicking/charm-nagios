@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+SLACK_URL={{ slack_webhook }}
+FOOTER_ICON=http://env.baarnes.com/Nagios.png
+
+# Set variables depending on type of alert
+case $1 in
+  "host")
+    notificationtype=$2
+    hostname=$3
+    hostaddress=$4
+    state=$5
+    checkoutput=$6
+    longdate=$7
+    ;;
+  "service")
+    notificationtype=$2
+    hostname=$3
+    hostaddress=$4
+    servicedescription=$5
+    state=$6
+    checkoutput=$7
+    longdate=$8
+    lastchange=$9
+    ;;
+  *)
+    echo "ERROR: Unknown alert type"
+    exit 1
+esac
+
+echo ${state}
+
+# Set colour of notification based on the state
+case ${state} in
+  "DOWN"|"CRITICAL")
+    msg_colour="danger"
+    ;;
+  "WARNING")
+    msg_colour="warning"
+    ;;
+  "UP"|"OK")
+    msg_colour="good"
+    ;;
+  *)
+    msg_colour="#CCCCCC"
+    ;;
+esac
+
+IFS='%'
+
+# Build message
+if [ $1 = "service" ]; then
+  SLACK_MSG="payload={\"attachments\":[{\"color\": \"${msg_colour}\",\"title\": \"Service ${notificationtype} notification\",
+  \"text\": \"Host:        ${hostname}\\nIP:             ${hostaddress}\\nService:    ${servicedescription}\\nState:        ${state}\"},
+  {\"color\": \"${msg_colour}\",\"title\":\"Additional Info :\",\"text\":\"\\n${checkoutput}\",
+  \"footer\": \"Nagios notification: ${longdate}\",\"footer_icon\": \"$FOOTER_ICON\"}]}"
+else
+  SLACK_MSG="payload={\"attachments\":[{\"color\": \"${msg_colour}\",\"title\": \"Host ${notificationtype} notification\",
+  \"text\": \"Host:        ${hostname}\\nIP:             ${hostaddress}\\nState:        ${state}\"},
+  {\"color\": \"${msg_colour}\",\"title\":\"Additional Info :\",\"text\":\"\\n${checkoutput}\",
+  \"footer\": \"Nagios notification: ${longdate}\",\"footer_icon\": \"$FOOTER_ICON\"}]}"
+fi
+
+#Send message to Slack
+curl -4 -X POST --data "$SLACK_MSG" $SLACK_URL
+
+unset IFS
