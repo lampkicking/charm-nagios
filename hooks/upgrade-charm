@@ -130,7 +130,7 @@ def enable_slack_config():
             fetch.apt_install(pkg)
 
         # Build template dict for later
-        slack-template-values = {
+        slack_template_values = {
             'slack_channel': slack_channel,
             'slack_domain': slack_domain,
             'slack_token': slack_token,
@@ -142,7 +142,7 @@ def enable_slack_config():
        
         t = Template(templateDef)
         with open(slack_cfg, 'w') as f:
-            f.write(t.render(slack-template-values))
+            f.write(t.render(slack_template_values))
 
         # Load template for script and render with template
         ## Source for script https://raw.github.com/tinyspeck/services-examples/master/nagios.pl
@@ -151,7 +151,7 @@ def enable_slack_config():
 
         t = Template(templateDef)
         with open(slack_exec, 'w') as f:
-            f.write(t.render(slack-template-values))
+            f.write(t.render(slack_template_values))
 
         # Make script executable
         os.chmod(slack_exec, 755)
